@@ -2,74 +2,90 @@
   <img src="assets/radixquantvla-banner.png" alt="RadixQuantVLA" width="760">
 </p>
 
-# RadixQuantVLA
-RadixQuantVLA is a unified research and engineering stack for Vision-Language-Action (VLA) model quantization, LIBERO evaluation, and hardware-portability preparation.
+# RadixQuantVLA: A Lego-like Framework for Unified Quantization and Deployment of Vision-Language-Action Models
 
-The repository integrates QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, GR00T-N1.5, and Pi0.5/OpenPI-style routes behind a shared set of launchers, checkpoint conventions, output formats, and validation notes.
+<p align="center">
+  <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
+  <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
+  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA-orange" alt="Quantization routes">
+  <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
+  <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
+  <img src="https://img.shields.io/badge/Deployment-DCU%20%7C%20NPU%20ready-lightgrey" alt="Deployment preparation">
+</p>
+
+RadixQuantVLA is a unified research and engineering stack for post-training quantization, LIBERO evaluation, and deployment-oriented preparation of Vision-Language-Action (VLA) models.
+
+The project integrates QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, GR00T-N1.5, and Pi0.5/OpenPI-style routes behind a shared set of launchers, checkpoint conventions, output formats, and validation notes.
+
+<p align="center">
+  <a href="#why-radixquantvla">Why</a> | 
+  <a href="#architecture">Architecture</a> | 
+  <a href="#key-features">Key Features</a> | 
+  <a href="#validation-snapshot">Validation</a> | 
+  <a href="#quick-start">Quick Start</a> | 
+  <a href="#supported-routes">Supported Routes</a> | 
+  <a href="#roadmap">Roadmap</a>
+</p>
 
 > RadixQuantVLA is under active development. Large checkpoints, quantized packs, datasets, and generated benchmark outputs are intentionally kept outside git.
 
-## Why Unify VLA Quantization?
+## Why RadixQuantVLA?
 
-VLA models are not ordinary language or vision-language models. They combine visual perception, language-conditioned reasoning, robot state, and action generation inside one embodied policy. Their outputs are executable actions, so a small low-bit quantization error can propagate from visual encoding to semantic reasoning, action decoding, trajectory generation, contact dynamics, and closed-loop control.
+VLA models are not ordinary LLMs or VLMs. A VLA policy couples visual perception, language-conditioned reasoning, robot state, and action generation. Its output is not a text token but an executable robot action. A small low-bit error may propagate through perception, semantic grounding, action decoding, trajectory generation, contact dynamics, and closed-loop control.
 
-This makes VLA quantization different from conventional LLM quantization. Token-level accuracy, reconstruction error, or model size alone cannot fully explain whether a compressed VLA policy still works. A practical VLA quantization stack must also preserve action fidelity, temporal stability, semantic-action alignment, and downstream task success.
+This makes VLA quantization a behavior-preserving compression problem. Model size, token accuracy, or reconstruction error alone cannot tell whether a quantized policy still works. Practical VLA quantization must also preserve action fidelity, temporal stability, semantic-action alignment, and downstream task success.
 
-Existing VLA quantization work is fragmented across model families, runtime assumptions, checkpoint layouts, and evaluation scripts. RadixQuantVLA turns these separate code paths into named, reproducible routes so different quantization methods can be inspected, compared, and extended in one project.
+Existing VLA quantization projects are fragmented across model families, runtime assumptions, checkpoint layouts, calibration procedures, and evaluation scripts. RadixQuantVLA turns these separate code paths into Lego-like, named routes so different models and quantization methods can be inspected, compared, reproduced, and extended in one project.
 
 ## What Breaks Without a Unified Stack?
 
 | Fragmentation Point | Practical Impact |
 | --- | --- |
-| Separate launchers for each upstream project | Users repeatedly patch scripts, paths, ports, and task settings. |
-| Conflicting dependency stacks | GR00T/Pi0.5, OpenVLA, UniVLA, and StarVLA often require different Python and Transformers versions. |
-| Inconsistent checkpoint and pack layouts | A run that works on one machine is hard to reproduce on another. |
+| Separate launchers for each upstream project | Users repeatedly patch scripts, paths, ports, task ids, and runtime flags. |
+| Conflicting dependency stacks | GR00T/Pi0.5, OpenVLA, UniVLA, and StarVLA may require different Python, PyTorch, and Transformers versions. |
+| Inconsistent checkpoint and pack layouts | A run that works on one machine is difficult to reproduce on another. |
 | Ambiguous quantization artifacts | Runtime quantization, `quantized.pt` packs, QVLA proxy files, gates, calibration files, and activation statistics are easy to confuse. |
 | Scattered benchmark settings | LIBERO suite, task id, trial count, init offset, video, and logging choices become hidden variables. |
-| No stable hardware boundary | Porting to DCU, NPU, IPU, or other accelerators requires a clear route, operator, artifact, and runtime definition. |
+| No stable deployment boundary | Porting to DCU, NPU, IPU, or other accelerators requires clear definitions for model, operator, artifact, and runtime. |
 
-RadixQuantVLA addresses these issues by standardizing route names, launcher behavior, checkpoint conventions, logs, summaries, and route-level documentation.
+RadixQuantVLA standardizes route names, launcher behavior, checkpoint conventions, logs, summaries, and route-level documentation.
 
-## Design View
+## Architecture
 
-The project follows a pipeline-oriented view of VLA quantization:
+RadixQuantVLA follows a modular, pipeline-oriented view of VLA quantization and deployment preparation.
 
-```text
-Observation + Instruction
-        |
-        v
-Vision Encoder -> LLM/VLM Backbone -> Action Head / Action Decoder
-        |                 |                    |
-        |                 |                    v
-        |                 |            Executable Robot Action
-        |                 |
-        v                 v
-Calibration, sensitivity analysis, rotation, runtime quantization, GPTQ packs, mixed-bit allocation
-```
+<p align="center">
+  <img src="assets/Architecture.png" alt="RadixQuantVLA architecture" width="860">
+</p>
 
-From this view, quantization is treated as a behavior-preserving compression problem rather than only a tensor compression problem. The repository therefore keeps the model route, quantization method, calibration data, evaluation suite, and output artifacts explicit.
+From this view, each route is a composable block: model loader, quantization method, calibration context, benchmark suite, output artifact, and validation record. This is the reason for the Lego-like design.
 
-## What RadixQuantVLA Provides
+### Research Note: Calibration Granularity
+
+Recent World Action Model quantization work, including QuantWAMs, reinforces an important point for embodied models: post-training quantization decisions should match the calibration context. For closed-loop or iterative action models, useful calibration is shaped by model structure, rollout distribution, and task objective. In practical terms, RadixQuantVLA treats calibration data, sensitivity analysis, layer protection, and route-specific artifacts as first-class engineering objects rather than hidden temporary files.
+
+QuantWAMs is not advertised here as an integrated route. It is used as a research reference for future WAM-oriented extensions, especially around closed-loop rollout-aware calibration and video-action objective-aware precision allocation.
+
+## Latest News
+
+| Date | Update |
+| --- | --- |
+| 2026-09 | Project renamed and repositioned as `RadixQuantVLA`. README rebuilt around a unified VLA quantization and deployment architecture. |
+| 2026-08 | StarVLA-OFT FP16/BF16 LIBERO route integrated and validated. |
+| 2026-08 | UniVLA FP16 LIBERO route integrated and validated with action decoder support. |
+| 2026-08 | QVLA/OpenVLA and OpenVLA-OFT mixed-bit W8 routes integrated. |
+| 2026-08 | GR00T-N1.5 and Pi0.5/OpenPI W4A8/W4A4 routes validated under the unified launcher. |
+
+## Key Features
 
 | Layer | Purpose |
 | --- | --- |
 | Unified route launcher | One command surface for GR00T, Pi0.5/OpenPI, OpenVLA, OpenVLA-OFT, UniVLA, and StarVLA routes. |
-| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, QVLA mixed-bit W8, and related calibration paths. |
+| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, ATM/OHB, QVLA mixed-bit W8, and related calibration paths. |
 | LIBERO evaluation | Consistent task-suite evaluation, rollout handling, logs, and merged summaries. |
 | Artifact normalization | Standard locations for logs, summaries, rollouts, activation statistics, packs, proxy files, gates, and calibration files. |
 | Reproducibility notes | Environment, checkpoint, known-fix, and validation documentation for each major route. |
-| Hardware-portability preparation | Clear separation between model checkpoint, quantization route, runtime dependency, and benchmark artifact. |
-
-## Main Route Matrix
-
-| Model family | Profiles | Quantization / evaluation status |
-| --- | --- | --- |
-| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn` | FP16, runtime W4A8, W4A4 GPTQ pack, W4A4 DuQuant, and W4A4 RTN routes. |
-| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn` | OpenPI service evaluation with FP16, runtime W4A8, W4A4 GPTQ pack, and W4A4 RTN routes. |
-| OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
-| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
-| UniVLA | `univla_fp16` | FP16 evaluation with an external action decoder. Quantized UniVLA routes are not advertised as validated yet. |
-| StarVLA | `starvla_oft_fp16`, `starvla_gr00t_fp16`, `starvla_pi_fp16`, `starvla_fast_fp16` | StarVLA-OFT FP16/BF16 is validated. Other FP16/BF16 entries require matching checkpoints. Quantized StarVLA routes require future Qwen-VL/action-head adapters. |
+| Hardware-portability preparation | Clear separation between model checkpoint, quantization route, runtime dependency, benchmark artifact, and deployment boundary. |
 
 ## Validation Snapshot
 
@@ -98,6 +114,18 @@ The validation snapshot above was reproduced on the following workstation:
 | System memory | 96 GB |
 | Storage | 200 GB SSD |
 
+## Supported Routes
+
+| Model family | Profiles | Quantization / evaluation status |
+| --- | --- | --- |
+| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn` | FP16, runtime W4A8, W4A4 GPTQ pack, W4A4 DuQuant, and W4A4 RTN routes. |
+| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn` | OpenPI service evaluation with FP16, runtime W4A8, W4A4 GPTQ pack, and W4A4 RTN routes. |
+| OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
+| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
+| UniVLA | `univla_fp16` | FP16 evaluation with an external action decoder. Quantized UniVLA routes are not advertised as validated yet. |
+| StarVLA | `starvla_oft_fp16`, `starvla_gr00t_fp16`, `starvla_pi_fp16`, `starvla_fast_fp16` | StarVLA-OFT FP16/BF16 is validated. Other FP16/BF16 entries require matching checkpoints. Quantized StarVLA routes require future Qwen-VL/action-head adapters. |
+| WAM extensions | Planned | QuantWAMs-style closed-loop calibration and video-action objective-aware precision allocation are future research directions. |
+
 ## Quick Start
 
 Detailed installation, checkpoint preparation, and route-specific verification commands are maintained in `docs/`.
@@ -120,7 +148,9 @@ Recommended documentation order:
 
 - [Installation](docs/installation.md)
 - [Checkpoints and Quantized Packs](docs/checkpoints.md)
+- [Usage](docs/usage.md)
 - [Verification Guide](docs/verification.md)
+- [OpenVLA/QVLA Guide](docs/qvla_openvla.md)
 - [UniVLA Guide](docs/univla.md)
 - [StarVLA Guide](docs/starvla.md)
 - [Chinese Documentation](docs/zh_cn/README.md)
@@ -198,9 +228,10 @@ Join the RadixRootMind China developer WeChat group:
 - Normalize route-level benchmark manifests and scorecards.
 - Add stronger smoke tests for all public profiles.
 - Improve offline checkpoint and quantized-pack discovery.
-- Extend hardware-portability notes for DCU, NPU, and IPU platforms.
+- Extend hardware-portability notes for DCU, NPU, IPU, and other accelerator platforms.
+- Explore WAM-oriented quantization routes inspired by closed-loop calibration and video-action objective-aware precision allocation.
 - Promote additional UniVLA and StarVLA quantized routes after validation.
 
 ## Lineage and Credits
 
-RadixQuantVLA integrates and adapts ideas and code paths from QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, OpenPI, GR00T, and LIBERO. Please check the original repositories and licenses when using or redistributing derived components.
+RadixQuantVLA integrates and adapts ideas and code paths from QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, OpenPI, GR00T, and LIBERO. It also tracks related research directions such as QuantWAMs for future WAM-oriented quantization extensions. Please check the original repositories, papers, and licenses when using or redistributing derived components.
