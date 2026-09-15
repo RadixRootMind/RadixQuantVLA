@@ -91,10 +91,6 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 以下结果来自合并后的本地工程验证，用于说明路线可以在本仓库中端到端跑通，不作为论文官方 benchmark 数字。
 
-<p align="center">
-  <img src="../../assets/ValidationSnapshot.svg" alt="RadixQuantVLA LIBERO 验证结果" width="920">
-</p>
-
 | Profile | 模型 | Suite | 路线 | 结果 |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |

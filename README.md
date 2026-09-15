@@ -91,10 +91,6 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 These are local engineering validation results after integration. They show that the listed routes run end-to-end in this repository. They are not claimed as official paper benchmark numbers.
 
-<p align="center">
-  <img src="assets/ValidationSnapshot.svg" alt="RadixQuantVLA LIBERO validation snapshot" width="920">
-</p>
-
 | Profile | Model | Suite | Route | Result |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |
