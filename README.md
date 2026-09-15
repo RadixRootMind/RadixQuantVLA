@@ -91,6 +91,10 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 These are local engineering validation results after integration. They show that the listed routes run end-to-end in this repository. They are not claimed as official paper benchmark numbers.
 
+<p align="center">
+  <img src="assets/ValidationSnapshot.svg" alt="RadixQuantVLA LIBERO validation snapshot" width="920">
+</p>
+
 | Profile | Model | Suite | Route | Result |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |
@@ -225,12 +229,24 @@ Join the RadixRootMind China developer WeChat group:
 
 ## Roadmap
 
+<p align="center">
+  <img src="assets/Roadmap.png" alt="RadixQuantVLA community roadmap" width="920">
+</p>
+
+This table lists VLA quantization algorithms and target embodied AI models for community developers.
+
+- P1 (High Priority): Critical tasks. Prioritized for implementation, validation and offline robot real-machine demo.
+- P2 (Medium Priority): Follow-up optimization tasks, to be tackled after completing all P1 items.
+- P3 (Low Priority): Long-term research, benchmark and exploratory work.
+
 - Normalize route-level benchmark manifests and scorecards.
 - Add stronger smoke tests for all public profiles.
 - Improve offline checkpoint and quantized-pack discovery.
 - Extend hardware-portability notes for DCU, NPU, IPU, and other accelerator platforms.
 - Explore WAM-oriented quantization routes inspired by closed-loop calibration and video-action objective-aware precision allocation.
 - Promote additional UniVLA and StarVLA quantized routes after validation.
+
+We welcome developers to join and participate in the development of RadixQuantVLA.
 
 ## Lineage and Credits
 

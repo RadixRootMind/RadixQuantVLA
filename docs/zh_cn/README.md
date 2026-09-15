@@ -91,6 +91,10 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 以下结果来自合并后的本地工程验证，用于说明路线可以在本仓库中端到端跑通，不作为论文官方 benchmark 数字。
 
+<p align="center">
+  <img src="../../assets/ValidationSnapshot.svg" alt="RadixQuantVLA LIBERO 验证结果" width="920">
+</p>
+
 | Profile | 模型 | Suite | 路线 | 结果 |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |
@@ -225,12 +229,24 @@ RadixQuantVLA 主要面向 VLA 模型的研究复现、后训练量化评测和�
 
 ## 路线图
 
+<p align="center">
+  <img src="../../assets/Roadmap.png" alt="RadixQuantVLA 社区路线图" width="920">
+</p>
+
+这张表面向社区开发者列出了 VLA 量化算法与目标具身智能模型的规划关系。
+
+- P1（高优先级）：关键任务，优先用于实现、验证和离线机器人真机 Demo。
+- P2（中优先级）：后续优化任务，在完成全部 P1 项后推进。
+- P3（低优先级）：长期研究、benchmark 和探索性工作。
+
 - 统一 route-level benchmark manifest 和 scorecard。
 - 为所有公开 profile 增加更强的 smoke test。
 - 改进离线环境下的 checkpoint 和量化 pack 发现机制。
 - 补充 DCU、NPU、IPU 等平台的硬件适配说明。
 - 探索 WAM 方向的闭环校准和 video-action 任务目标感知精度分配路线。
 - 在验证完成后，逐步发布 UniVLA 和 StarVLA 的量化路线。
+
+我们欢迎开发者一起参与 RadixQuantVLA 项目的开发。
 
 ## 来源与致谢
 
