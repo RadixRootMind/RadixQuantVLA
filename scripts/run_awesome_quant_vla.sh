@@ -46,6 +46,7 @@ GR00T profiles:
 Pi0.5/OpenPI profiles:
   pi05_w4a4_gptq         Pi0.5 W4A4: GPTQ/SVD-Hadamard pack
   pi05_w4a8_duquant      Pi0.5 W4A8: DuQuant + Pi0.5 ATM/OHB
+  pi05_w4a8_mlp_duquant  Pi0.5 W4A8: MLP only, attention kept floating point
   pi05_duquant_w4a8      Pi0.5 DuQuant W4A8 generic include regex
   pi05_w4a4_rtn          Pi0.5 RTN W4A4 baseline
   pi05_fp16              Pi0.5 FP16 baseline
@@ -206,6 +207,9 @@ EOF
   method           : ${METHOD}
   pi05 gptq pack   : ${OPENPI_GPTQ_PATH:-}
   pi05 atm json    : ${GR00T_ATM_ALPHA_PATH:-}
+  pi05 atm / ohb   : ${GR00T_ATM_ENABLE:-0} / ${GR00T_OHB_ENABLE:-0}
+  duquant include : ${OPENPI_DUQUANT_INCLUDE:-}
+  duquant exclude : ${OPENPI_DUQUANT_EXCLUDE:-}
 EOF
     elif [[ "$MODEL_KIND" == "openvla" ]]; then
         cat <<EOF
@@ -454,6 +458,34 @@ case "$PROFILE" in
         GR00T_OHB_ENABLE="${GR00T_OHB_ENABLE:-1}"
         GR00T_OHB_FALLBACK="${GR00T_OHB_FALLBACK:-1.0}"
         GR00T_ATM_ALPHA_PATH="${GR00T_ATM_ALPHA_PATH:-${QUANTVLA_ROOT}/atm_alpha_beta_pi05/$(suite_to_pi05_atm_json "$SUITE")}"
+        ;;
+    pi05_w4a8_mlp_duquant|pi05_w4a8_mlp)
+        MODEL_KIND="pi05"
+        LAUNCHER="${SCRIPT_DIR}/run_pi05_libero_benchmark.sh"
+        METHOD="duquant"
+        WBITS=4
+        ABITS=8
+        # Conservative first-pass scope: MLP projections only. Attention
+        # Q/K/V/O remain floating point until matching calibration is made.
+        PI05_MLP_W4A8_INCLUDE='.*paligemma_with_expert\.(paligemma\.model\.language_model|gemma_expert\.model)\.layers\.[0-9]+\.mlp\.(gate_proj|up_proj|down_proj)$'
+        OPENPI_DUQUANT_INCLUDE="${OPENPI_DUQUANT_INCLUDE:-$PI05_MLP_W4A8_INCLUDE}"
+        PI05_MLP_W4A8_EXCLUDE='(?:^|\.)(vision|norm|ln|layernorm|embed|lm_head|pos_embed|timestep|state_encoder|action_encoder|action_decoder|state_proj|action_in_proj|action_out_proj|time_mlp)(?:\.|$)'
+        OPENPI_DUQUANT_EXCLUDE="${OPENPI_DUQUANT_EXCLUDE:-$PI05_MLP_W4A8_EXCLUDE}"
+        # Keep the profile neutral by default. Supplying a Pi0.5 calibration
+        # JSON explicitly enables the same profile for ATM/OHB ablations.
+        if [[ -n "${GR00T_ATM_ALPHA_PATH:-}" ]]; then
+            GR00T_ATM_SCOPE="pi05"
+            GR00T_OHB_SCOPE="pi05"
+            GR00T_ATM_ENABLE="${GR00T_ATM_ENABLE:-1}"
+            GR00T_OHB_ENABLE="${GR00T_OHB_ENABLE:-1}"
+            GR00T_OHB_FALLBACK="${GR00T_OHB_FALLBACK:-1.0}"
+        else
+            GR00T_ATM_SCOPE=""
+            GR00T_OHB_SCOPE=""
+            GR00T_ATM_ENABLE=0
+            GR00T_OHB_ENABLE=0
+        fi
+        export GR00T_DUQUANT_PERM_SCORE=weight
         ;;
     pi05_duquant_w4a8)
         MODEL_KIND="pi05"

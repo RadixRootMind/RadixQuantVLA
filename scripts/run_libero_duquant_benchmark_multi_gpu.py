@@ -227,12 +227,16 @@ def configure_duquant_env(env: dict[str, str], wbits: int, abits: int, packdir: 
     env["GR00T_DUQUANT_CALIB_STEPS"] = env.get("GR00T_DUQUANT_CALIB_STEPS", "32")
     env["GR00T_DUQUANT_LS"] = env.get("GR00T_DUQUANT_LS", "0.15")
     env["GR00T_DUQUANT_PACKDIR"] = packdir
-    env["GR00T_ATM_ENABLE"] = "0"
-    env["GR00T_OHB_ENABLE"] = "0"
-    env.pop("GR00T_ATM_ALPHA_PATH", None)
-    env.pop("GR00T_ATM_SCOPE", None)
-    env.pop("GR00T_OHB_FALLBACK", None)
-    env.pop("GR00T_OHB_SCOPE", None)
+    # Preserve explicitly requested Pi0.5 calibration through the launcher.
+    # Keep the historical non-Pi0.5 benchmark default neutral.
+    if env.get("GR00T_ATM_SCOPE") == "pi05":
+        env.setdefault("GR00T_ATM_ENABLE", "0")
+        env.setdefault("GR00T_OHB_ENABLE", "0")
+    else:
+        env["GR00T_ATM_ENABLE"] = "0"
+        env["GR00T_OHB_ENABLE"] = "0"
+        for key in ("GR00T_ATM_ALPHA_PATH", "GR00T_ATM_SCOPE", "GR00T_OHB_FALLBACK", "GR00T_OHB_SCOPE"):
+            env.pop(key, None)
     env["TORCH_COMPILE_DISABLE"] = "1"
     env["TORCHDYNAMO_DISABLE"] = "1"
     env["TORCH_CUDA_GRAPH_DISABLE"] = "1"
