@@ -3,6 +3,7 @@
 Run with the OpenPI Python and this repository on PYTHONPATH. This only
 enumerates targets; it does not replace modules or quantize weights.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -13,7 +14,6 @@ import re
 from collections import Counter
 from pathlib import Path
 
-
 CURRENT_INCLUDE = re.compile(
     r"(.*paligemma_with_expert\.paligemma\.model\.language_model\.layers\.[0-9]+\..*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)|.*paligemma_with_expert\.gemma_expert\.model\.layers\.[0-9]+\.mlp\.(gate_proj|up_proj|down_proj))$"
 )
@@ -23,7 +23,9 @@ CONSERVATIVE_INCLUDE = re.compile(
 PROTECTED_ATTENTION = re.compile(
     r".*paligemma_with_expert\.(paligemma\.model\.language_model|gemma_expert\.model)\.layers\.[0-9]+\.self_attn\.(q_proj|k_proj|v_proj|o_proj)$"
 )
-EXCLUDED = re.compile(r"(?:^|\.)(vision|norm|ln|layernorm|embed|lm_head|pos_embed|timestep|state_encoder|action_encoder|action_decoder|state_proj|action_in_proj|action_out_proj|time_mlp)(?:\.|$)")
+EXCLUDED = re.compile(
+    r"(?:^|\.)(vision|norm|ln|layernorm|embed|lm_head|pos_embed|timestep|state_encoder|action_encoder|action_decoder|state_proj|action_in_proj|action_out_proj|time_mlp)(?:\.|$)"
+)
 
 
 def classify(name: str) -> str:
@@ -59,8 +61,18 @@ def main() -> None:
     model = policy._model
     from gr00t.quantization.duquant_layers import select_targets
 
-    current_names = {n for n, _ in select_targets(model, include_regex=CURRENT_INCLUDE.pattern, exclude_regex=EXCLUDED.pattern)}
-    conservative_names = {n for n, _ in select_targets(model, include_regex=CONSERVATIVE_INCLUDE.pattern, exclude_regex=EXCLUDED.pattern)}
+    current_names = {
+        n
+        for n, _ in select_targets(
+            model, include_regex=CURRENT_INCLUDE.pattern, exclude_regex=EXCLUDED.pattern
+        )
+    }
+    conservative_names = {
+        n
+        for n, _ in select_targets(
+            model, include_regex=CONSERVATIVE_INCLUDE.pattern, exclude_regex=EXCLUDED.pattern
+        )
+    }
     if not conservative_names:
         raise RuntimeError("MLP-only scope selected zero Linear layers; check model naming")
     if any(PROTECTED_ATTENTION.fullmatch(n) for n in conservative_names):
@@ -68,15 +80,17 @@ def main() -> None:
     linears = []
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Linear):
-            linears.append({
-                "name": name,
-                "in_features": module.in_features,
-                "weight_dtype": str(module.weight.dtype),
-                "out_features": module.out_features,
-                "category": classify(name),
-                "current_profile": name in current_names,
-                "conservative_mlp_only": name in conservative_names,
-            })
+            linears.append(
+                {
+                    "name": name,
+                    "in_features": module.in_features,
+                    "weight_dtype": str(module.weight.dtype),
+                    "out_features": module.out_features,
+                    "category": classify(name),
+                    "current_profile": name in current_names,
+                    "conservative_mlp_only": name in conservative_names,
+                }
+            )
     current = [x for x in linears if x["current_profile"]]
     conservative = [x for x in linears if x["conservative_mlp_only"]]
     protected = [x for x in linears if PROTECTED_ATTENTION.fullmatch(x["name"])]
@@ -86,8 +100,14 @@ def main() -> None:
         "scope": "Pi0.5 PyTorch Linear audit; no module replacement or quantization",
         "checkpoint": str(checkpoint),
         "checkpoint_sha256": checkpoint_sha256,
-        "current_profile": {"count": len(current), "by_category": dict(Counter(x["category"] for x in current))},
-        "conservative_mlp_only": {"count": len(conservative), "by_category": dict(Counter(x["category"] for x in conservative))},
+        "current_profile": {
+            "count": len(current),
+            "by_category": dict(Counter(x["category"] for x in current)),
+        },
+        "conservative_mlp_only": {
+            "count": len(conservative),
+            "by_category": dict(Counter(x["category"] for x in conservative)),
+        },
         "protected_attention": {"count": len(protected), "names": [x["name"] for x in protected]},
         "all_linear_count": len(linears),
         "current_layers": current,
@@ -96,7 +116,20 @@ def main() -> None:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2) + "\n")
-    print(json.dumps({k: report[k] for k in ("current_profile", "conservative_mlp_only", "protected_attention", "all_linear_count")}, indent=2))
+    print(
+        json.dumps(
+            {
+                k: report[k]
+                for k in (
+                    "current_profile",
+                    "conservative_mlp_only",
+                    "protected_attention",
+                    "all_linear_count",
+                )
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

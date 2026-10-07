@@ -16,6 +16,8 @@ import socket
 
 import tyro
 
+logger = logging.getLogger(__name__)
+
 
 @dataclasses.dataclass
 class ArgsConfig:
@@ -137,7 +139,7 @@ def main(args: ArgsConfig) -> None:
     logging.info("Loading OpenPI config=%s checkpoint=%s", args.data_config, args.model_path)
     train_config = _config.get_config(args.data_config)
     sample_kwargs = {"num_steps": args.denoising_steps} if args.denoising_steps else None
-    logging.info("OpenPI sampling kwargs=%s (None uses model defaults)", sample_kwargs)
+    logger.info("OpenPI sampling kwargs=%s (None uses model defaults)", sample_kwargs)
     policy = _policy_config.create_trained_policy(
         train_config,
         args.model_path,
