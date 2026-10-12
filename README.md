@@ -220,7 +220,7 @@ Real robot deployment still requires model export, runtime conversion, hardware 
 Join the RadixRootMind China developer WeChat group:
 
 <p align="center">
-  <img src="assets/radixrootmind-wechat-group.jpg" alt="RadixRootMind China developer WeChat group QR code" width="360">
+  <img src="assets/RadixRootMind_group.png" alt="RadixRootMind China developer WeChat group QR code" width="360">
 </p>
 
 ## Roadmap
