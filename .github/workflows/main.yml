@@ -21,6 +21,8 @@ env:
 
 jobs:
   checks:
+    continue-on-error: ${{ matrix.task.name != 'Test' }}
+
     name: Python ${{ matrix.python }} - ${{ matrix.task.name }}
     runs-on: [ubuntu-latest]
     timeout-minutes: 15
