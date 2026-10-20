@@ -16,6 +16,8 @@ import socket
 
 import tyro
 
+logger = logging.getLogger(__name__)
+
 
 @dataclasses.dataclass
 class ArgsConfig:
@@ -41,7 +43,7 @@ class ArgsConfig:
     """Accepted for compatibility with scripts/inference_service.py."""
 
     denoising_steps: int = 0
-    """Accepted for compatibility; OpenPI sampling config controls this internally."""
+    """Sampling steps passed to OpenPI; zero uses the model default."""
 
     embodiment_tag: str = ""
     """Accepted for compatibility; OpenPI LIBERO config defines embodiment mapping."""
@@ -131,13 +133,19 @@ def main(args: ArgsConfig) -> None:
     from openpi.serving import websocket_policy_server
     from openpi.training import config as _config
 
+    if args.denoising_steps < 0:
+        raise ValueError("denoising_steps must be non-negative")
+
     logging.info("Loading OpenPI config=%s checkpoint=%s", args.data_config, args.model_path)
     train_config = _config.get_config(args.data_config)
+    sample_kwargs = {"num_steps": args.denoising_steps} if args.denoising_steps else None
+    logger.info("OpenPI sampling kwargs=%s (None uses model defaults)", sample_kwargs)
     policy = _policy_config.create_trained_policy(
         train_config,
         args.model_path,
         default_prompt=args.default_prompt,
         pytorch_device=args.device,
+        sample_kwargs=sample_kwargs,
     )
 
     _apply_quantization_if_requested(policy)

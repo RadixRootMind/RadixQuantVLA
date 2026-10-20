@@ -154,3 +154,51 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --acti
 bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action assign
 bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action eval
 ```
+
+## Pi0.5：MLP-only W4A8 层策略与消融回归
+
+`pi05_w4a8_mlp_duquant` 仅量化 PaliGemma language 和 Gemma action expert
+的 `mlp.gate_proj/up_proj/down_proj`。两部分 Q/K/V/O、视觉塔和动作输入/输出
+保持浮点。旧 `pi05_w4a8_duquant` 的层范围与默认开关不变。
+
+先用 `--action plan` 查看实际 include/exclude、W/A 位宽及 ATM/OHB 开关：
+
+```bash
+bash scripts/run_awesome_quant_vla.sh pi05_w4a8_mlp_duquant --suite object --action plan
+```
+
+使用已经配置好的 OpenPI PyTorch 环境与完整 `pi05_libero` checkpoint 审计真实层名。
+审计不执行量化，输出权重 dtype 与模型 hash；零匹配或命中受保护 attention 时失败。
+
+```bash
+PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" "$OPENPI_PY" \
+  tools/quantvla/audit_pi05_w4a8.py \
+  --checkpoint "$OPENPI_CHECKPOINT" --device cuda \
+  --out results/pi05_libero/layer_audit.json
+```
+
+当前已检查的 Pi0.5 模型为 108 个 MLP Linear（language/expert 各 54），
+保护 144 个 attention 投影。旧 profile 选中 180 层；数量属于该 checkpoint，
+不应硬编码为其他模型的保证。已有公共 DuQuant 用浮点运算模拟 W4A8，
+本项不承诺压缩后的权重、低比特整数内核、加速或国产设备性能。
+
+默认不加载 ATM/OHB。显式提供与模型及层范围匹配的 `GR00T_ATM_ALPHA_PATH`
+后，可用 `(GR00T_ATM_ENABLE, GR00T_OHB_ENABLE)` 的 `(0,0)/(1,0)/(0,1)/(1,1)`
+做四组消融；调度器保留 Pi0.5 的设置。仅提供文件路径时默认同时开启。
+本项不生成校准 JSON，也不验证已有 JSON 的校准质量；不要直接套用旧 W4A4 参数。
+独立校准生成、capture 统计和 hook 可靠性修复属于后续贡献。
+
+服务现将正数 `--denoising-steps` 传给 OpenPI `num_steps`；0 保持模型默认，
+负数报错。比较时固定模型、任务、初始状态和去噪步数。
+本补丁不引入固定噪声或激活尺度冻结工具，不能单独复现更完整工作区的全部实验。
+
+回归测试在 CPU 上运行，无需 checkpoint、LIBERO 或 GPU，但需要 PyTorch、
+QuantVLA 量化依赖及服务 CLI 的 tyro：
+
+```bash
+PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" "$OPENPI_PY" tests/test_pi05_w4a8_scope.py
+```
+
+测试真实选择和替换小型模型的 MLP、attention/辅助层保留、旧 profile 范围、
+四组 launcher/scheduler 开关及去噪步数传递。服务边界使用 mock；该测试不代表
+真实 OpenPI 推理或 LIBERO 成功率验收。
