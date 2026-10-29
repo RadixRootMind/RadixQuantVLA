@@ -64,6 +64,10 @@ bash scripts/run_awesome_quant_vla.sh groot_w4a8 \
 | `openvla_qvla_w8` | OpenVLA QVLA mixed-bit target average 8. |
 | `openvla_oft_fp16` | OpenVLA-OFT FP16 LIBERO evaluation. |
 | `openvla_oft_qvla_w8` | OpenVLA-OFT QVLA mixed-bit target average 8. |
+| `pi05_foldquant_w4a4` | Pi0.5 native TensorRT W4A4, LLM + action expert. |
+| `pi05_foldquant_w8a8` | Pi0.5 native TensorRT W8A8, LLM + action expert. |
+| `groot_n15_foldquant_w4a4` | GR00T N1.5 native TensorRT W4A4, LLM + DiT. |
+| `groot_n15_foldquant_w8a8` | GR00T N1.5 native TensorRT W8A8, LLM + DiT. |
 
 ## 4. LIBERO Suite Mapping
 
@@ -201,6 +205,19 @@ bash scripts/run_awesome_quant_vla.sh pi05_w4a4_gptq \
   --suite object \
   --action result
 ```
+
+## 9. FoldQuantVLA Example
+
+```bash
+bash scripts/run_awesome_quant_vla.sh pi05_foldquant_w4a4 \
+  --suite spatial \
+  --trials 1 \
+  --foldquant-dataset "$FOLDQUANT_PI05_DATASET" \
+  --output-root "$AWESOME_QVLA_ROOT/results/foldquant/pi05_w4a4_spatial" \
+  --action pipeline
+```
+
+The same launcher supports `kernels`, `quantize`, `export`, `build`, `verify`, `benchmark`, `eval`, `result`, and `pipeline`. See [foldquantvla.md](foldquantvla.md) before running a native build.
 
 If you used a custom output directory:
 

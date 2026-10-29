@@ -326,6 +326,17 @@ print("UniVLA extra deps ok")
 PY
 ```
 
-## 9. Next Step
+## 9. FoldQuantVLA Environments
+
+FoldQuantVLA uses two isolated environments because Pi0.5 and GR00T N1.5 pin different Python, PyTorch, Transformers, and TensorRT versions:
+
+```bash
+conda env create -f environments/foldquant_pi05_env.yml
+conda env create -f environments/foldquant_groot_env.yml
+```
+
+The YAML files establish the Python/native-build base. Model-specific packages, CUTLASS, TensorRT, plugin compilation, and the separate Pi0.5 LIBERO client are documented in [foldquantvla.md](foldquantvla.md).
+
+## 10. Next Step
 
 Prepare model checkpoints and optional quantized packs using [checkpoints.md](checkpoints.md), then run profiles using [usage.md](usage.md).

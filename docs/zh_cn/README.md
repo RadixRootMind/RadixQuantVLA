@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
   <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
-  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA-orange" alt="Quantization routes">
+  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA%20%7C%20FoldQuant-orange" alt="Quantization routes">
   <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
   <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
   <img src="https://img.shields.io/badge/Deployment-DCU%20%7C%20NPU%20ready-lightgrey" alt="Deployment preparation">
@@ -15,7 +15,7 @@
 
 RadixQuantVLA 是一个面向 Vision-Language-Action（VLA）模型后训练量化、LIBERO 评测与部署适配准备的统一研究与工程项目。
 
-本项目把 QuantVLA、Omega-QVLA、QVLA/OpenVLA、OpenVLA-OFT、OpenDriveLab/UniVLA、StarVLA、GR00T-N1.5、Pi0.5/OpenPI 等相关路线整合到同一个仓库中，并提供统一的启动入口、checkpoint 约定、输出结构和验证说明。
+本项目把 QuantVLA、Omega-QVLA、QVLA/OpenVLA、FoldQuantVLA、OpenVLA-OFT、OpenDriveLab/UniVLA、StarVLA、GR00T-N1.5、Pi0.5/OpenPI 等相关路线整合到同一个仓库中，并提供统一的启动入口、checkpoint 约定、输出结构和验证说明。
 
 <p align="center">
   <a href="#为什么需要-radixquantvla">为什么</a> | 
@@ -70,6 +70,7 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 | 时间 | 更新 |
 | --- | --- |
+| 2026-10 | 完成 Pi0.5 与 GR00T N1.5 的 FoldQuantVLA 原生 W4A4/W8A8 路线接入，覆盖量化 checkpoint、ONNX、TensorRT engine、数值验证、时延测试和 LIBERO 评测。 |
 | 2026-09 | 项目重命名并重新定位为 `RadixQuantVLA`，README 按统一 VLA 量化与部署架构重塑。 |
 | 2026-08 | StarVLA-OFT FP16/BF16 LIBERO 路线完成集成和验证。 |
 | 2026-08 | UniVLA FP16 LIBERO 路线完成集成，并支持 action decoder。 |
@@ -81,7 +82,7 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 | 层级 | 作用 |
 | --- | --- |
 | 统一路线入口 | 使用同一个脚本入口管理 GR00T、Pi0.5/OpenPI、OpenVLA、OpenVLA-OFT、UniVLA 和 StarVLA。 |
-| 量化路线整合 | 覆盖 W4A8、W4A4、GPTQ、RTN、DuQuant、QVLA mixed-bit W8 及相关校准流程。 |
+| 量化路线整合 | 覆盖 W4A8、W4A4、GPTQ、RTN、DuQuant、QVLA mixed-bit W8，以及 FoldQuant 原生 TensorRT W4A4/W8A8。 |
 | LIBERO 评测 | 统一 task suite、rollout、日志和 merged summary 输出。 |
 | 产物规范化 | 统一 logs、summaries、rollouts、act_stats、packs、proxy、gates、calib 等输出位置。 |
 | 可复现说明 | 为主要路线保留环境、checkpoint、常见修复和验证结果。 |
@@ -102,10 +103,16 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 | `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8 | 26.0% |
 | `univla_fp16` | UniVLA | LIBERO Spatial | FP16 + action decoder | 96.0% |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | FP16/BF16 policy-server 评测 | 99.0% |
+| `pi05_foldquant_w4a4` | Pi0.5/OpenPI | 四套 LIBERO suite | 原生 TensorRT W4A4 | 98.25% |
+| `pi05_foldquant_w8a8` | Pi0.5/OpenPI | LIBERO Spatial | 原生 TensorRT W8A8，P3 协议 | 99.5% |
+
+### FoldQuant Pi0.5 W8A8 部署验证
+
+接入后的 W8A8 路线已经完整覆盖量化 checkpoint、ONNX 导出、设备相关 TensorRT 插件与 engine、held-out 数值验证、时延 Benchmark 和 LIBERO 闭环评测。在 RTX 3060 整合服务器上，动作余弦相似度均值达到 0.9999958、最小值达到 0.9999917；端到端中位时延由 PyTorch Eager 的 411.5 ms 降至 TensorRT W8A8 的 213.9 ms，加速 1.92 倍；P3 协议下 LIBERO Spatial 达到 199/200。
 
 ## 验证环境
 
-以上验证结果来自以下本地工作站配置：
+上表中原有合并路线来自以下本地工作站。
 
 | 组件 | 配置 |
 | --- | --- |
@@ -118,8 +125,8 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 | 模型族 | Profile | 量化 / 评测状态 |
 | --- | --- | --- |
-| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn` | 支持 FP16、runtime W4A8、W4A4 GPTQ pack、W4A4 DuQuant 和 W4A4 RTN。 |
-| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn` | 基于 OpenPI service 评测，支持 FP16、runtime W4A8、W4A4 GPTQ pack 和 W4A4 RTN。 |
+| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn`, `groot_n15_foldquant_w4a4`, `groot_n15_foldquant_w8a8` | 在原有 FP16/runtime 路线外，新增 FoldQuant 原生 TensorRT INT4/INT8 checkpoint、ONNX、engine、验证、性能测试和评测。 |
+| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn`, `pi05_foldquant_w4a4`, `pi05_foldquant_w8a8` | 在原有 OpenPI service 路线外，新增 FoldQuant 原生 TensorRT INT4/INT8 部署产物与评测。 |
 | OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | 支持 FP16 baseline 和 QVLA mixed-bit W8 评测。 |
 | OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | 支持 FP16 baseline 和 QVLA mixed-bit W8 评测。 |
 | UniVLA | `univla_fp16` | 支持带外部 action decoder 的 FP16 评测；量化路线暂不作为已验证路线发布。 |
@@ -153,6 +160,7 @@ bash scripts/run_awesome_quant_vla.sh groot_w4a8 \
 - [OpenVLA/QVLA 说明](qvla_openvla.md)
 - [UniVLA 说明](univla.md)
 - [StarVLA 说明](starvla.md)
+- [FoldQuantVLA 原生 W4A4/W8A8 说明](foldquantvla.md)
 - [English README](../../README.md)
 
 ## Checkpoint 与产物
@@ -166,6 +174,7 @@ checkpoint 和量化 pack 不进入 git。通常把本地模型放到 `$CHECKPOI
 - QVLA W8 路线会生成 calibration JSONL、Hessian proxy、gate/bit allocation 和评测输出；`proxy.pt` 是分析产物，不是可直接部署的量化模型。
 - Pi0.5 路线需要先把官方 OpenPI JAX/Orbax checkpoint 转成 PyTorch checkpoint。
 - UniVLA 和 StarVLA 路线需要各自对应的模型 checkpoint，部分路线还需要 action decoder 资产。
+- FoldQuant 路线会生成完整量化 checkpoint、ONNX、设备相关 TensorRT engine、数值验证、时延报告和 LIBERO 汇总；更换 GPU 架构或 TensorRT 版本后需要重建 engine 与插件。
 
 具体下载与转换命令见 [checkpoints.md](checkpoints.md)。
 
@@ -202,7 +211,8 @@ RadixQuantVLA
 |   |-- openvla
 |   |-- openvla_oft
 |   |-- univla
-|   `-- starvla
+|   |-- starvla
+|   `-- foldquantvla
 |-- tests/
 `-- results/
 ```
@@ -220,7 +230,7 @@ RadixQuantVLA 主要面向 VLA 模型的研究复现、后训练量化评测和�
 加入 RadixRootMind 中国区开发者微信群：
 
 <p align="center">
-  <img src="../../assets/radixrootmind-wechat-group.jpg" alt="RadixRootMind 中国区开发者微信群二维码" width="360">
+  <img src="../../assets/RadixRootMind_group.png" alt="RadixRootMind 中国区开发者微信群二维码" width="360">
 </p>
 
 ## 路线图
@@ -246,4 +256,4 @@ RadixQuantVLA 主要面向 VLA 模型的研究复现、后训练量化评测和�
 
 ## 来源与致谢
 
-RadixQuantVLA 整合并适配了 QuantVLA、Omega-QVLA、QVLA/OpenVLA、OpenVLA-OFT、OpenDriveLab/UniVLA、StarVLA、OpenPI、GR00T 和 LIBERO 等项目中的思路与代码路线。本项目也会持续跟踪 QuantWAMs 等 WAM 量化研究方向，用于后续扩展。使用或再分发相关组件时，请同时核对原项目的许可证、论文引用与开源要求。
+RadixQuantVLA 整合并适配了 QuantVLA、Omega-QVLA、QVLA/OpenVLA、FoldQuantVLA、OpenVLA-OFT、OpenDriveLab/UniVLA、StarVLA、OpenPI、GR00T 和 LIBERO 等项目中的思路与代码路线。本项目也会持续跟踪 QuantWAMs 等 WAM 量化研究方向，用于后续扩展。使用或再分发相关组件时，请同时核对原项目的许可证、论文引用与开源要求。

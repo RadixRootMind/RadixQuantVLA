@@ -314,3 +314,18 @@ bash scripts/run_awesome_quant_vla.sh pi05_w4a4_gptq \
 - Pi0.5 SVDQuant-style build：`tools/build_pi05_svdquant_weights.py`
 
 本地构建比直接评测更慢，也更依赖显存和环境。建议先用小样本 calibration 验证 pack 能加载，再扩大样本数。
+
+## 10. FoldQuantVLA Checkpoint 与部署产物
+
+FoldQuant 复用现有 Pi0.5 PyTorch checkpoint 和按 suite 区分的 GR00T N1.5 checkpoint，不读取 `quantized.pt` pack。`quantize` 阶段会写出完整量化 checkpoint 目录，后续再生成 ONNX 与 TensorRT engine。
+
+```text
+$CHECKPOINTS_ROOT/pi05_libero_pytorch/
+$CHECKPOINTS_ROOT/gr00t-n1.5-libero-<suite>-posttrain/
+
+<output-root>/quantized/
+<output-root>/onnx/
+<output-root>/engines/
+```
+
+校准数据要求和完整命令见 [foldquantvla.md](foldquantvla.md)。

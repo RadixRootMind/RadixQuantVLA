@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the FoldQuantVLA paper."
+title: "FoldQuantVLA"
+authors:
+  - family-names: Ho
+    given-names: Hung T.
+  - family-names: Nguyen
+    given-names: Khanh D.
+  - family-names: Nguyen
+    given-names: Quang D.
+  - family-names: Duong
+    given-names: Thanh Q.
+  - family-names: Le
+    given-names: Ngan
+  - family-names: Guo
+    given-names: Meng
+  - family-names: Ngo
+    given-names: Vien A.
+  - family-names: Le
+    given-names: An T.
+license: Apache-2.0
+repository-code: "https://github.com/cair-vinuni/FoldQuantVLA"
+url: "https://review-artifact-27f4.github.io/foldquantvla/"
+version: 0.1.0
+date-released: 2026-09-04
+preferred-citation:
+  type: article
+  title: "FoldQuantVLA: Native Low-Bit Quantization of Vision-Language-Action Models via Consistent Folding"
+  authors:
+    - family-names: Ho
+      given-names: Hung T.
+    - family-names: Nguyen
+      given-names: Khanh D.
+    - family-names: Nguyen
+      given-names: Quang D.
+    - family-names: Duong
+      given-names: Thanh Q.
+    - family-names: Le
+      given-names: Ngan
+    - family-names: Guo
+      given-names: Meng
+    - family-names: Ngo
+      given-names: Vien A.
+    - family-names: Le
+      given-names: An T.
+  year: 2026
+  journal: "arXiv preprint"
+  identifiers:
+    - type: other
+      value: "arXiv:2609.24433"
+  url: "https://arxiv.org/abs/2609.24433"

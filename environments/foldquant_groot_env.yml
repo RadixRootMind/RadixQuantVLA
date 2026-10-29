@@ -1,0 +1,12 @@
+name: radix_foldquant_groot
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cmake>=3.24
+  - ninja
+  - packaging
+  - setuptools>=68
+  - wheel
+

@@ -1,0 +1,12 @@
+name: radix_foldquant_pi05
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - cmake>=3.24
+  - ninja
+  - packaging
+  - setuptools>=68
+  - wheel
+

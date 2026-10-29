@@ -510,3 +510,18 @@ The repository includes pack-building tools:
 - Pi0.5 SVDQuant-style build: `tools/build_pi05_svdquant_weights.py`
 
 Pack building is slower and more hardware-sensitive than evaluation. Start from a small calibration run, verify that the pack loads, then scale up calibration samples.
+
+## 9. FoldQuantVLA Checkpoints and Artifacts
+
+FoldQuant uses the existing Pi0.5 PyTorch and suite-specific GR00T N1.5 checkpoints. It does not use a `quantized.pt` pack. The `quantize` stage writes a complete quantized checkpoint directory; later stages write ONNX graphs and TensorRT engines beneath the selected output root.
+
+```text
+$CHECKPOINTS_ROOT/pi05_libero_pytorch/
+$CHECKPOINTS_ROOT/gr00t-n1.5-libero-<suite>-posttrain/
+
+<output-root>/quantized/
+<output-root>/onnx/
+<output-root>/engines/
+```
+
+See [foldquantvla.md](foldquantvla.md) for calibration dataset requirements and complete commands.

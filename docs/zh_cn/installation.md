@@ -232,3 +232,14 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_fp16 \
   --openvla-python /path/to/awesome_qvla_openvla/bin/python \
   --openvla-checkpoint "$CHECKPOINTS_ROOT/openvla-7b-oft-finetuned-libero-spatial"
 ```
+
+## 6. FoldQuantVLA 独立环境
+
+Pi0.5 与 GR00T N1.5 的 Python、PyTorch、Transformers 和 TensorRT 固定版本不同，不能共用一个 FoldQuant 环境：
+
+```bash
+conda env create -f environments/foldquant_pi05_env.yml
+conda env create -f environments/foldquant_groot_env.yml
+```
+
+YAML 只建立 Python 与原生编译基础环境。模型依赖、CUTLASS、TensorRT、插件编译和 Pi0.5 独立 LIBERO client 的完整步骤见 [foldquantvla.md](foldquantvla.md)。

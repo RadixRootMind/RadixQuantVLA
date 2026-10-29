@@ -17,6 +17,7 @@ The numbers below are local engineering validation results. They show that each 
 | `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 10 per task | 26.0% | QVLA mixed-bit W8 route |
 | `univla_fp16` | UniVLA | LIBERO Spatial | 10 per task | 96.0% | FP16 route with action decoder |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | 10 per task | 99.0% | FP16/BF16 policy-server route |
+| `pi05_foldquant_w4a4` | Pi0.5/OpenPI | All four suites | 20 per task | 98.25% | Native TensorRT W4A4; separate RTX 3060 integration evidence |
 
 ## Common Setup
 
@@ -82,6 +83,10 @@ bash scripts/run_awesome_quant_vla.sh pi05_w4a8_duquant \
 ```
 
 Verified result: `99.0%`.
+
+## FoldQuantVLA Pi0.5 W4A4
+
+The integrated native TensorRT route has server-side evidence of 786/800 successful episodes (98.25%) across LIBERO Spatial, Object, Goal, and LIBERO-10. The corresponding BF16 result was 782/800 (97.75%). Use the dedicated guide for the pinned environment, exact stages, and result provenance: [foldquantvla.md](foldquantvla.md).
 
 ## Pi0.5 W4A4 GPTQ
 

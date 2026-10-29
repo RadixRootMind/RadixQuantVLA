@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
   <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
-  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA-orange" alt="Quantization routes">
+  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA%20%7C%20FoldQuant-orange" alt="Quantization routes">
   <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
   <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
   <img src="https://img.shields.io/badge/Deployment-DCU%20%7C%20NPU%20ready-lightgrey" alt="Deployment preparation">
@@ -15,7 +15,7 @@
 
 RadixQuantVLA is a unified research and engineering stack for post-training quantization, LIBERO evaluation, and deployment-oriented preparation of Vision-Language-Action (VLA) models.
 
-The project integrates QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, GR00T-N1.5, and Pi0.5/OpenPI-style routes behind a shared set of launchers, checkpoint conventions, output formats, and validation notes.
+The project integrates QuantVLA, Omega-QVLA, QVLA/OpenVLA, FoldQuantVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, GR00T-N1.5, and Pi0.5/OpenPI-style routes behind a shared set of launchers, checkpoint conventions, output formats, and validation notes.
 
 <p align="center">
   <a href="#why-radixquantvla">Why</a> | 
@@ -70,6 +70,7 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 | Date | Update |
 | --- | --- |
+| 2026-10 | FoldQuantVLA native W4A4/W8A8 routes integrated for Pi0.5 and GR00T N1.5, including quantized checkpoints, ONNX export, TensorRT engine build, numerical verification, latency benchmark, and LIBERO evaluation. |
 | 2026-09 | Project renamed and repositioned as `RadixQuantVLA`. README rebuilt around a unified VLA quantization and deployment architecture. |
 | 2026-08 | StarVLA-OFT FP16/BF16 LIBERO route integrated and validated. |
 | 2026-08 | UniVLA FP16 LIBERO route integrated and validated with action decoder support. |
@@ -81,7 +82,7 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 | Layer | Purpose |
 | --- | --- |
 | Unified route launcher | One command surface for GR00T, Pi0.5/OpenPI, OpenVLA, OpenVLA-OFT, UniVLA, and StarVLA routes. |
-| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, ATM/OHB, QVLA mixed-bit W8, and related calibration paths. |
+| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, ATM/OHB, QVLA mixed-bit W8, and FoldQuant native TensorRT W4A4/W8A8. |
 | LIBERO evaluation | Consistent task-suite evaluation, rollout handling, logs, and merged summaries. |
 | Artifact normalization | Standard locations for logs, summaries, rollouts, activation statistics, packs, proxy files, gates, and calibration files. |
 | Reproducibility notes | Environment, checkpoint, known-fix, and validation documentation for each major route. |
@@ -102,10 +103,16 @@ These are local engineering validation results after integration. They show that
 | `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8 | 26.0% |
 | `univla_fp16` | UniVLA | LIBERO Spatial | FP16 with action decoder | 96.0% |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | FP16/BF16 policy-server evaluation | 99.0% |
+| `pi05_foldquant_w4a4` | Pi0.5/OpenPI | All four LIBERO suites | Native TensorRT W4A4 | 98.25% |
+| `pi05_foldquant_w8a8` | Pi0.5/OpenPI | LIBERO Spatial | Native TensorRT W8A8, P3 protocol | 99.5% |
+
+### FoldQuant Pi0.5 W8A8 deployment evidence
+
+The integrated W8A8 route completes the full deployment-oriented chain: quantized checkpoint, ONNX export, device-specific TensorRT plugins and engines, held-out numerical verification, latency benchmark, and LIBERO closed-loop evaluation. On the RTX 3060 integration host, action cosine similarity reached 0.9999958 on average (0.9999917 minimum). Median end-to-end latency decreased from 411.5 ms for PyTorch Eager to 213.9 ms for TensorRT W8A8, a 1.92x speedup, while the P3 LIBERO Spatial evaluation reached 199/200 successes.
 
 ## Verified Environment
 
-The validation snapshot above was reproduced on the following workstation:
+The original merged-route validation rows above were reproduced on the following workstation.
 
 | Component | Configuration |
 | --- | --- |
@@ -118,8 +125,8 @@ The validation snapshot above was reproduced on the following workstation:
 
 | Model family | Profiles | Quantization / evaluation status |
 | --- | --- | --- |
-| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn` | FP16, runtime W4A8, W4A4 GPTQ pack, W4A4 DuQuant, and W4A4 RTN routes. |
-| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn` | OpenPI service evaluation with FP16, runtime W4A8, W4A4 GPTQ pack, and W4A4 RTN routes. |
+| GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn`, `groot_n15_foldquant_w4a4`, `groot_n15_foldquant_w8a8` | Existing FP16/runtime routes plus FoldQuant native TensorRT INT4/INT8 checkpoints, ONNX, engines, verification, benchmark, and evaluation. |
+| Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn`, `pi05_foldquant_w4a4`, `pi05_foldquant_w8a8` | Existing OpenPI service routes plus FoldQuant native TensorRT INT4/INT8 deployment artifacts and evaluation. |
 | OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
 | OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
 | UniVLA | `univla_fp16` | FP16 evaluation with an external action decoder. Quantized UniVLA routes are not advertised as validated yet. |
@@ -153,6 +160,7 @@ Recommended documentation order:
 - [OpenVLA/QVLA Guide](docs/qvla_openvla.md)
 - [UniVLA Guide](docs/univla.md)
 - [StarVLA Guide](docs/starvla.md)
+- [FoldQuantVLA Native W4A4/W8A8 Guide](docs/foldquantvla.md)
 - [Chinese Documentation](docs/zh_cn/README.md)
 
 ## Checkpoints and Artifacts
@@ -166,6 +174,7 @@ Important route differences:
 - QVLA W8 routes generate calibration JSONL, Hessian proxy, gate/bit-allocation artifacts, and evaluation outputs. `proxy.pt` is an analysis artifact, not a standalone deployable quantized model.
 - Pi0.5 routes require an OpenPI PyTorch checkpoint converted from the official OpenPI JAX/Orbax checkpoint.
 - UniVLA and StarVLA routes require their own model checkpoints and, where applicable, action decoder assets.
+- FoldQuant routes generate a complete quantized checkpoint, ONNX graphs, device-specific TensorRT engines, numerical-verification reports, latency reports, and LIBERO summaries. Their engines and plugin binaries must be rebuilt when the GPU architecture or TensorRT version changes.
 
 See [docs/checkpoints.md](docs/checkpoints.md) for concrete download and conversion commands.
 
@@ -202,7 +211,8 @@ RadixQuantVLA
 |   |-- openvla
 |   |-- openvla_oft
 |   |-- univla
-|   `-- starvla
+|   |-- starvla
+|   `-- foldquantvla
 |-- tests/
 `-- results/
 ```
@@ -246,4 +256,4 @@ We welcome developers to join and participate in the development of RadixQuantVL
 
 ## Lineage and Credits
 
-RadixQuantVLA integrates and adapts ideas and code paths from QuantVLA, Omega-QVLA, QVLA/OpenVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, OpenPI, GR00T, and LIBERO. It also tracks related research directions such as QuantWAMs for future WAM-oriented quantization extensions. Please check the original repositories, papers, and licenses when using or redistributing derived components.
+RadixQuantVLA integrates and adapts ideas and code paths from QuantVLA, Omega-QVLA, QVLA/OpenVLA, FoldQuantVLA, OpenVLA-OFT, OpenDriveLab/UniVLA, StarVLA, OpenPI, GR00T, and LIBERO. It also tracks related research directions such as QuantWAMs for future WAM-oriented quantization extensions. Please check the original repositories, papers, and licenses when using or redistributing derived components.

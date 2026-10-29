@@ -72,6 +72,10 @@ bash scripts/run_awesome_quant_vla.sh PROFILE \
 | `openvla_qvla_w8` | OpenVLA QVLA mixed-bit 平均 8 bit |
 | `openvla_oft_fp16` | OpenVLA-OFT FP16 LIBERO 评测 |
 | `openvla_oft_qvla_w8` | OpenVLA-OFT QVLA mixed-bit 平均 8 bit |
+| `pi05_foldquant_w4a4` | Pi0.5 LLM + Action Expert 原生 TensorRT W4A4 |
+| `pi05_foldquant_w8a8` | Pi0.5 LLM + Action Expert 原生 TensorRT W8A8 |
+| `groot_n15_foldquant_w4a4` | GR00T N1.5 LLM + DiT 原生 TensorRT W4A4 |
+| `groot_n15_foldquant_w8a8` | GR00T N1.5 LLM + DiT 原生 TensorRT W8A8 |
 
 ## 4. GR00T 示例
 
@@ -202,3 +206,16 @@ PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" "$OPENPI_PY" tests/test_pi05_w4a8_s
 测试真实选择和替换小型模型的 MLP、attention/辅助层保留、旧 profile 范围、
 四组 launcher/scheduler 开关及去噪步数传递。服务边界使用 mock；该测试不代表
 真实 OpenPI 推理或 LIBERO 成功率验收。
+
+## FoldQuantVLA 示例
+
+```bash
+bash scripts/run_awesome_quant_vla.sh pi05_foldquant_w4a4 \
+  --suite spatial \
+  --trials 1 \
+  --foldquant-dataset "$FOLDQUANT_PI05_DATASET" \
+  --output-root "$AWESOME_QVLA_ROOT/results/foldquant/pi05_w4a4_spatial" \
+  --action pipeline
+```
+
+统一入口支持 `kernels`、`quantize`、`export`、`build`、`verify`、`benchmark`、`eval`、`result` 和 `pipeline`。运行原生编译前先阅读 [foldquantvla.md](foldquantvla.md)。

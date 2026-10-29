@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "foldquant"
+version = "0.1.0"
+description = "FoldQuant: native low-bit (W8A8 / W4A4) quantization of vision-language-action models via consistent folding"
+readme = "README.upstream.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "The FoldQuant Authors" }]
+# Model environments under models/ pin their own dependency versions.
+dependencies = [
+    "torch>=2.4",
+    "numpy>=1.26",
+    "onnx>=1.16",
+    "onnx-graphsurgeon>=0.5",
+]
+
+[project.optional-dependencies]
+# TensorRT is optional for quantization and required for engine build/runtime.
+trt = ["tensorrt>=10.3"]
+dev = ["pytest>=7.4", "ruff>=0.7"]
+
+[tool.setuptools.packages.find]
+include = ["foldquant*"]
+
+[tool.setuptools.package-data]
+# Include sources for device-specific builds via `python -m foldquant.kernels build`.
+"foldquant.kernels" = [
+    "tensorrt/CMakeLists.txt",
+    "tensorrt/**/kernel.cmake",
+    "tensorrt/**/*.cu",
+    "tensorrt/**/*.cuh",
+    "tensorrt/**/*.cpp",
+    "tensorrt/**/*.h",
+    "tensorrt/**/*.md",
+    "prebuilt/*.so",
+    "prebuilt/README.md",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["models", "third_party"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

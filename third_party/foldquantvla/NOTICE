@@ -1,0 +1,9 @@
+FoldQuantVLA
+Copyright (c) 2026 The FoldQuant Authors.
+
+This product is licensed under the Apache License, Version 2.0; see LICENSE.
+
+Upstream model code vendored under `models/*/`, and third-party sources under
+`third_party/*` and `foldquant/kernels/tensorrt/*/` that carry their own license
+headers, remain under those licenses (Apache-2.0 / BSD-3-Clause); see the
+respective LICENSE and ATTRIBUTIONS files alongside them.

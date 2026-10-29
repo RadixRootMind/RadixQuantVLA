@@ -24,6 +24,8 @@ Actions:
   --action result    Print total_success_rate from merged_summary.json.
   --action build_calib|proxy|assign|eval|export
                      OpenVLA/QVLA staged actions.
+  --action kernels|quantize|export|build|verify|benchmark|eval|pipeline
+                     FoldQuant staged or end-to-end actions.
 
 Common options:
   --suite object|spatial|goal|long
@@ -66,6 +68,12 @@ StarVLA profiles:
   starvla_pi_fp16        StarVLA-PI LIBERO FP16/BF16 eval; pass matching checkpoint
   starvla_fast_fp16      StarVLA-FAST LIBERO FP16/BF16 eval; pass matching checkpoint
 
+FoldQuantVLA profiles:
+  pi05_foldquant_w4a4        Pi0.5 FoldQuant LLM + action expert W4A4
+  pi05_foldquant_w8a8        Pi0.5 FoldQuant LLM + action expert W8A8
+  groot_n15_foldquant_w4a4   GR00T N1.5 FoldQuant LLM + DiT W4A4
+  groot_n15_foldquant_w8a8   GR00T N1.5 FoldQuant LLM + DiT W8A8
+
 Pack/checkpoint options:
   --groot-gptq-pack PATH  Pack for groot_w4a4_gptq.
   --pi05-gptq-pack PATH   Pack for pi05_w4a4_gptq.
@@ -91,6 +99,16 @@ Pack/checkpoint options:
   --target-avg-bits FLOAT
   --max-samples N
   --max-layers N
+  --foldquant-python PATH
+  --foldquant-client-python PATH
+  --foldquant-dataset PATH
+  --foldquant-num-calib N
+  --foldquant-max-shard-gib N
+  --foldquant-protocol upstream|p3
+  --foldquant-quantized-dir PATH
+  --foldquant-onnx-dir PATH
+  --foldquant-engine-dir PATH
+  --foldquant-workspace-mb N
 
 Examples:
   bash scripts/run_awesome_quant_vla.sh groot_w4a8 --suite object --gpus 0 --trials 10
@@ -100,6 +118,8 @@ Examples:
   bash scripts/run_awesome_quant_vla.sh pi05_w4a4_gptq --suite object --action result
   bash scripts/run_awesome_quant_vla.sh univla_fp16 --suite spatial --gpus 0 --trials 10
   bash scripts/run_awesome_quant_vla.sh starvla_oft_fp16 --suite spatial --gpus 0 --trials 10
+  bash scripts/run_awesome_quant_vla.sh pi05_foldquant_w4a4 --suite spatial --action pipeline
+  bash scripts/run_awesome_quant_vla.sh groot_n15_foldquant_w8a8 --suite object --action eval
 EOF
 }
 
@@ -232,6 +252,18 @@ EOF
   max tasks        : ${MAX_TASKS}
   unnorm key       : ${STARVLA_UNNORM_KEY:-auto}
 EOF
+    elif [[ "$MODEL_KIND" == foldquant_* ]]; then
+        cat <<EOF
+  foldquant family : ${FOLDQUANT_FAMILY}
+  foldquant python : ${FOLDQUANT_PYTHON}
+  checkpoint       : ${FOLDQUANT_CHECKPOINT}
+  calibration data : ${FOLDQUANT_DATASET:-<required for quantize/verify/benchmark>}
+  schemes          : ${FOLDQUANT_LLM_SCHEME} + ${FOLDQUANT_ACTION_SCHEME}
+  quantized model  : ${FOLDQUANT_QUANTIZED_DIR}
+  onnx             : ${FOLDQUANT_ONNX_DIR}
+  engines          : ${FOLDQUANT_ENGINE_DIR}
+  protocol         : ${FOLDQUANT_PROTOCOL}
+EOF
     else
         cat <<EOF
   univla python    : ${UNIVLA_PYTHON}
@@ -283,6 +315,19 @@ MAX_SAMPLES="${MAX_SAMPLES:-32}"
 MAX_LAYERS="${MAX_LAYERS:-}"
 DENOISING_STEPS="${DENOISING_STEPS:-8}"
 REPLAN_STEPS="${REPLAN_STEPS:-5}"
+FOLDQUANT_PYTHON_ARG="${FOLDQUANT_PYTHON:-}"
+FOLDQUANT_CLIENT_PYTHON_ARG="${FOLDQUANT_CLIENT_PYTHON:-}"
+FOLDQUANT_DATASET_ARG="${FOLDQUANT_DATASET:-}"
+FOLDQUANT_NUM_CALIB="${FOLDQUANT_NUM_CALIB:-128}"
+FOLDQUANT_SEED="${FOLDQUANT_SEED:-0}"
+FOLDQUANT_PROTOCOL="${FOLDQUANT_PROTOCOL:-p3}"
+FOLDQUANT_MAX_SHARD_GIB="${FOLDQUANT_MAX_SHARD_GIB:-100}"
+FOLDQUANT_QUANTIZED_DIR_ARG="${FOLDQUANT_QUANTIZED_DIR:-}"
+FOLDQUANT_ONNX_DIR_ARG="${FOLDQUANT_ONNX_DIR:-}"
+FOLDQUANT_ENGINE_DIR_ARG="${FOLDQUANT_ENGINE_DIR:-}"
+FOLDQUANT_EMBODIMENT_TAG="${FOLDQUANT_EMBODIMENT_TAG:-new_embodiment}"
+FOLDQUANT_DATA_CONFIG="${FOLDQUANT_DATA_CONFIG:-examples.Libero.custom_data_config:LiberoDataConfig}"
+FOLDQUANT_WORKSPACE_MB="${FOLDQUANT_WORKSPACE_MB:-8192}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -327,6 +372,19 @@ while [[ $# -gt 0 ]]; do
         --max-layers) MAX_LAYERS="${2:?missing --max-layers value}"; shift 2 ;;
         --denoising-steps) DENOISING_STEPS="${2:?missing --denoising-steps value}"; shift 2 ;;
         --replan-steps) REPLAN_STEPS="${2:?missing --replan-steps value}"; shift 2 ;;
+        --foldquant-python) FOLDQUANT_PYTHON_ARG="${2:?missing --foldquant-python value}"; shift 2 ;;
+        --foldquant-client-python) FOLDQUANT_CLIENT_PYTHON_ARG="${2:?missing --foldquant-client-python value}"; shift 2 ;;
+        --foldquant-dataset) FOLDQUANT_DATASET_ARG="${2:?missing --foldquant-dataset value}"; shift 2 ;;
+        --foldquant-num-calib) FOLDQUANT_NUM_CALIB="${2:?missing --foldquant-num-calib value}"; shift 2 ;;
+        --foldquant-seed) FOLDQUANT_SEED="${2:?missing --foldquant-seed value}"; shift 2 ;;
+        --foldquant-protocol) FOLDQUANT_PROTOCOL="${2:?missing --foldquant-protocol value}"; shift 2 ;;
+        --foldquant-max-shard-gib) FOLDQUANT_MAX_SHARD_GIB="${2:?missing --foldquant-max-shard-gib value}"; shift 2 ;;
+        --foldquant-quantized-dir) FOLDQUANT_QUANTIZED_DIR_ARG="${2:?missing --foldquant-quantized-dir value}"; shift 2 ;;
+        --foldquant-onnx-dir) FOLDQUANT_ONNX_DIR_ARG="${2:?missing --foldquant-onnx-dir value}"; shift 2 ;;
+        --foldquant-engine-dir) FOLDQUANT_ENGINE_DIR_ARG="${2:?missing --foldquant-engine-dir value}"; shift 2 ;;
+        --foldquant-embodiment-tag) FOLDQUANT_EMBODIMENT_TAG="${2:?missing --foldquant-embodiment-tag value}"; shift 2 ;;
+        --foldquant-data-config) FOLDQUANT_DATA_CONFIG="${2:?missing --foldquant-data-config value}"; shift 2 ;;
+        --foldquant-workspace-mb) FOLDQUANT_WORKSPACE_MB="${2:?missing --foldquant-workspace-mb value}"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         --) shift; break ;;
         -*)
@@ -346,7 +404,7 @@ done
 [[ -n "$PROFILE" ]] || { usage; exit 2; }
 
 case "$ACTION" in
-    run|plan|result|build_calib|proxy|assign|eval|export) ;;
+    run|plan|result|build_calib|proxy|assign|eval|export|quantize|build|kernels|verify|benchmark|pipeline) ;;
     *) die "unknown action '$ACTION'" ;;
 esac
 
@@ -361,7 +419,7 @@ OPENPI_PY="${OPENPI_PY_ARG:-${OPENPI_ROOT}/.venv/bin/python}"
 OPENPI_CHECKPOINT="${OPENPI_CHECKPOINT_ARG:-${CHECKPOINTS_ROOT}/pi05_libero_pytorch}"
 
 export AWESOME_QVLA_ROOT QUANTVLA_ROOT CHECKPOINTS_ROOT QUANTVLA_CONDA_ENV
-export PROFILE ACTION SUITE GPU_LIST PORT_BASE NUM_TRIALS_PER_TASK OUTPUT_ROOT
+export PROFILE ACTION SUITE TASK_SUITE GPU_LIST PORT_BASE NUM_TRIALS_PER_TASK OUTPUT_ROOT
 export GR00T_EVAL_INIT_OFFSET
 export DENOISING_STEPS
 
@@ -508,6 +566,42 @@ case "$PROFILE" in
         WBITS=16
         ABITS=16
         ;;
+    pi05_foldquant_w4a4)
+        MODEL_KIND="foldquant_pi05"
+        LAUNCHER="${SCRIPT_DIR}/run_foldquantvla.sh"
+        FOLDQUANT_FAMILY="pi05"
+        FOLDQUANT_LLM_SCHEME="w4a4_srg"
+        FOLDQUANT_ACTION_SCHEME="w4a4_shg"
+        WBITS=4
+        ABITS=4
+        ;;
+    pi05_foldquant_w8a8)
+        MODEL_KIND="foldquant_pi05"
+        LAUNCHER="${SCRIPT_DIR}/run_foldquantvla.sh"
+        FOLDQUANT_FAMILY="pi05"
+        FOLDQUANT_LLM_SCHEME="w8a8_sr"
+        FOLDQUANT_ACTION_SCHEME="w8a8_sh"
+        WBITS=8
+        ABITS=8
+        ;;
+    groot_n15_foldquant_w4a4)
+        MODEL_KIND="foldquant_groot"
+        LAUNCHER="${SCRIPT_DIR}/run_foldquantvla.sh"
+        FOLDQUANT_FAMILY="groot_n1_5"
+        FOLDQUANT_LLM_SCHEME="w4a4_srg"
+        FOLDQUANT_ACTION_SCHEME="w4a4_shg"
+        WBITS=4
+        ABITS=4
+        ;;
+    groot_n15_foldquant_w8a8)
+        MODEL_KIND="foldquant_groot"
+        LAUNCHER="${SCRIPT_DIR}/run_foldquantvla.sh"
+        FOLDQUANT_FAMILY="groot_n1_5"
+        FOLDQUANT_LLM_SCHEME="w8a8_sr"
+        FOLDQUANT_ACTION_SCHEME="w8a8_sh"
+        WBITS=8
+        ABITS=8
+        ;;
     openvla_fp16)
         MODEL_KIND="openvla"
         LAUNCHER="${SCRIPT_DIR}/run_openvla_qvla.sh"
@@ -568,7 +662,30 @@ case "$PROFILE" in
         ;;
 esac
 
-if [[ "$MODEL_KIND" == "groot" ]]; then
+if [[ "$MODEL_KIND" == "foldquant_pi05" || "$MODEL_KIND" == "foldquant_groot" ]]; then
+    FOLDQUANT_QUANTIZED_DIR="${FOLDQUANT_QUANTIZED_DIR_ARG:-${OUTPUT_ROOT}/quantized}"
+    FOLDQUANT_ONNX_DIR="${FOLDQUANT_ONNX_DIR_ARG:-${OUTPUT_ROOT}/onnx}"
+    FOLDQUANT_ENGINE_DIR="${FOLDQUANT_ENGINE_DIR_ARG:-${OUTPUT_ROOT}/engines}"
+    if [[ "$MODEL_KIND" == "foldquant_pi05" ]]; then
+        FOLDQUANT_PYTHON="${FOLDQUANT_PYTHON_ARG:-${FOLDQUANT_PI05_PYTHON:-python}}"
+        FOLDQUANT_DATASET="${FOLDQUANT_DATASET_ARG:-${FOLDQUANT_PI05_DATASET:-}}"
+        FOLDQUANT_CHECKPOINT="${OPENPI_CHECKPOINT}"
+        FOLDQUANT_CLIENT_PYTHON="${FOLDQUANT_CLIENT_PYTHON_ARG:-${OPENPI_ROOT}/examples/libero/.venv/bin/python}"
+    else
+        FOLDQUANT_PYTHON="${FOLDQUANT_PYTHON_ARG:-${FOLDQUANT_GROOT_PYTHON:-python}}"
+        FOLDQUANT_DATASET="${FOLDQUANT_DATASET_ARG:-${FOLDQUANT_GROOT_DATASET:-}}"
+        CKPT_SUFFIX="$(suite_to_groot_ckpt_suffix "$SUITE")"
+        FOLDQUANT_CHECKPOINT="${GROOT_CHECKPOINT:-${CHECKPOINTS_ROOT}/gr00t-n1.5-${CKPT_SUFFIX}}"
+        FOLDQUANT_CLIENT_PYTHON="${FOLDQUANT_CLIENT_PYTHON_ARG:-}"
+    fi
+    FOLDQUANT_LABEL="${PROFILE#*_foldquant_}"
+    export WBITS ABITS FOLDQUANT_FAMILY FOLDQUANT_PYTHON FOLDQUANT_CLIENT_PYTHON
+    export FOLDQUANT_DATASET FOLDQUANT_CHECKPOINT FOLDQUANT_LLM_SCHEME FOLDQUANT_ACTION_SCHEME
+    export FOLDQUANT_NUM_CALIB FOLDQUANT_SEED FOLDQUANT_PROTOCOL FOLDQUANT_MAX_SHARD_GIB
+    export FOLDQUANT_QUANTIZED_DIR FOLDQUANT_ONNX_DIR FOLDQUANT_ENGINE_DIR FOLDQUANT_LABEL
+    export FOLDQUANT_EMBODIMENT_TAG FOLDQUANT_DATA_CONFIG FOLDQUANT_WORKSPACE_MB
+    export OPENPI_ROOT OPENPI_CONFIG REPLAN_STEPS
+elif [[ "$MODEL_KIND" == "groot" ]]; then
     CKPT_SUFFIX="$(suite_to_groot_ckpt_suffix "$SUITE")"
     CHECKPOINT="${GROOT_CHECKPOINT:-${CHECKPOINTS_ROOT}/gr00t-n1.5-${CKPT_SUFFIX}}"
     export CHECKPOINT PRESET WBITS ABITS
@@ -625,7 +742,7 @@ else
     export UNIVLA_ATTN_IMPL="${UNIVLA_ATTN_IMPL:-${OPENVLA_ATTN_IMPL}}"
 fi
 
-if [[ "$MODEL_KIND" == "openvla" || "$MODEL_KIND" == "univla" || "$MODEL_KIND" == "starvla" ]]; then
+if [[ "$MODEL_KIND" == "openvla" || "$MODEL_KIND" == "univla" || "$MODEL_KIND" == "starvla" || "$MODEL_KIND" == foldquant_* ]]; then
     PLAN_WAIT_LABEL="steps wait"
 else
     PLAN_WAIT_LABEL="init offset"
@@ -640,14 +757,29 @@ case "$ACTION" in
         exit 0
         ;;
     result)
-        print_result "$OUTPUT_ROOT"
+        if [[ "$MODEL_KIND" == foldquant_* ]]; then
+            bash "$LAUNCHER"
+        else
+            print_result "$OUTPUT_ROOT"
+        fi
         exit 0
         ;;
     run)
         bash "$LAUNCHER"
         ;;
-    build_calib|proxy|assign|eval|export)
+    build_calib|proxy|assign)
         [[ "$MODEL_KIND" == "openvla" ]] || die "action '$ACTION' is only supported for OpenVLA/QVLA profiles"
         bash "$LAUNCHER"
+        ;;
+    quantize|build|kernels|verify|benchmark|pipeline)
+        [[ "$MODEL_KIND" == foldquant_* ]] || die "action '$ACTION' is only supported for FoldQuantVLA profiles"
+        bash "$LAUNCHER"
+        ;;
+    eval|export)
+        if [[ "$MODEL_KIND" == "openvla" || "$MODEL_KIND" == foldquant_* ]]; then
+            bash "$LAUNCHER"
+        else
+            die "action '$ACTION' is not supported for profile '$PROFILE'"
+        fi
         ;;
 esac

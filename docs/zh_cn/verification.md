@@ -15,6 +15,7 @@
 | `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 每任务 10 次 | 26.0% | QVLA mixed-bit W8 |
 | `univla_fp16` | UniVLA | LIBERO Spatial | 每任务 10 次 | 96.0% | FP16，使用 action decoder |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | 每任务 10 次 | 99.0% | FP16/BF16 policy-server 路线 |
+| `pi05_foldquant_w4a4` | Pi0.5/OpenPI | 四套 LIBERO suite | 每任务 20 次 | 98.25% | 原生 TensorRT W4A4；独立 RTX 3060 服务器证据 |
 
 ## 通用设置
 
@@ -190,6 +191,10 @@ bash scripts/run_awesome_quant_vla.sh starvla_oft_fp16 \
 ```
 
 验证结果：`99.0%`。
+
+## FoldQuantVLA Pi0.5 W4A4
+
+已接入的原生 TensorRT 路线在 LIBERO Spatial、Object、Goal 和 LIBERO-10 共完成 786/800，成功率 98.25%；对应 BF16 为 782/800，成功率 97.75%。固定环境、分阶段命令和结果来源见 [foldquantvla.md](foldquantvla.md)。
 
 ## 常见可忽略提示
 
