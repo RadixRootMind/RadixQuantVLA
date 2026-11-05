@@ -7,7 +7,8 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
   <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
-  <img src="https://img.shields.io/badge/Quantization-W4A8%20%7C%20W4A4%20%7C%20GPTQ%20%7C%20QVLA%20%7C%20FoldQuant-orange" alt="Quantization routes">
+  <img src="https://img.shields.io/badge/Precision-W4A8%20%7C%20W4A4%20%7C%20W8A8%20%7C%20Mixed--bit%20W8-orange" alt="Quantization precision">
+  <img src="https://img.shields.io/badge/Methods-GPTQ%20%7C%20RTN%20%7C%20DuQuant%20%7C%20QVLA%20%7C%20FoldQuant-blue" alt="Quantization methods">
   <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
   <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
   <img src="https://img.shields.io/badge/Deployment-DCU%20%7C%20NPU%20ready-lightgrey" alt="Deployment preparation">
