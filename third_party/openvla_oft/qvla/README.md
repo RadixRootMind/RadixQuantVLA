@@ -35,7 +35,7 @@ logs or videos are included in this code release.
 ## Installation
 
 Use an isolated **Python 3.10** environment for OFT. Run the following commands
-from `openvla-oft/`, not from the repository root:
+from `third_party/openvla_oft/`, not from the repository root:
 
 ```bash
 python3.10 -m venv .venv

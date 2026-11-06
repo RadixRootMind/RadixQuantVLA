@@ -93,6 +93,11 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 These are local engineering validation results after integration. They show that the listed routes run end-to-end in this repository. They are not claimed as official paper benchmark numbers.
 
+The OpenVLA/OpenVLA-OFT rows below describe the legacy integration. The updated
+W4A16/W8A16 implementations and separate environment requirements are documented
+in the [QVLA route guide](docs/qvla_openvla.md). This update includes code only;
+new experiment results and generated artifacts are not bundled.
+
 | Profile | Model | Suite | Route | Result |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |
@@ -128,8 +133,8 @@ The original merged-route validation rows above were reproduced on the following
 | --- | --- | --- |
 | GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn`, `groot_n15_foldquant_w4a4`, `groot_n15_foldquant_w8a8` | Existing FP16/runtime routes plus FoldQuant native TensorRT INT4/INT8 checkpoints, ONNX, engines, verification, benchmark, and evaluation. |
 | Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn`, `pi05_foldquant_w4a4`, `pi05_foldquant_w8a8` | Existing OpenPI service routes plus FoldQuant native TensorRT INT4/INT8 deployment artifacts and evaluation. |
-| OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
-| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | FP16 baseline and QVLA mixed-bit W8 evaluation. |
+| OpenVLA | `openvla_fp16`, `openvla_qvla_w4`, `openvla_qvla_w8` | Causal OpenVLA, soft-action sensitivity and mixed-bit W4A16/W8A16. The legacy fp16 profile computes in BF16. |
+| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w4`, `openvla_oft_qvla_w8` | Native continuous-action sensitivity, two cameras, proprio and bidirectional SDPA; mixed-bit W4A16/W8A16. |
 | UniVLA | `univla_fp16` | FP16 evaluation with an external action decoder. Quantized UniVLA routes are not advertised as validated yet. |
 | StarVLA | `starvla_oft_fp16`, `starvla_gr00t_fp16`, `starvla_pi_fp16`, `starvla_fast_fp16` | StarVLA-OFT FP16/BF16 is validated. Other FP16/BF16 entries require matching checkpoints. Quantized StarVLA routes require future Qwen-VL/action-head adapters. |
 | WAM extensions | Planned | QuantWAMs-style closed-loop calibration and video-action objective-aware precision allocation are future research directions. |
@@ -172,7 +177,7 @@ Important route differences:
 
 - Runtime W4A8 routes, such as `groot_w4a8` and `pi05_w4a8_duquant`, do not require a prebuilt `quantized.pt` pack.
 - W4A4 GPTQ routes, such as `groot_w4a4_gptq` and `pi05_w4a4_gptq`, require an existing or locally built `quantized.pt` pack.
-- QVLA W8 routes generate calibration JSONL, Hessian proxy, gate/bit-allocation artifacts, and evaluation outputs. `proxy.pt` is an analysis artifact, not a standalone deployable quantized model.
+- QVLA W4/W8 routes generate training calibration JSONL, action-sensitivity proxies, channel-bit assignments and verified evaluation outputs. `proxy.pt` is an analysis artifact, not a standalone deployable quantized model.
 - Pi0.5 routes require an OpenPI PyTorch checkpoint converted from the official OpenPI JAX/Orbax checkpoint.
 - UniVLA and StarVLA routes require their own model checkpoints and, where applicable, action decoder assets.
 - FoldQuant routes generate a complete quantized checkpoint, ONNX graphs, device-specific TensorRT engines, numerical-verification reports, latency reports, and LIBERO summaries. Their engines and plugin binaries must be rebuilt when the GPU architecture or TensorRT version changes.

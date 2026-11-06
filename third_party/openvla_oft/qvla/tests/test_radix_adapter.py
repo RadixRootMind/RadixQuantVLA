@@ -40,17 +40,21 @@ def test_legacy_unverified_artifact_is_rejected(tmp_path):
         adapter.stage(SimpleNamespace(output_root=tmp_path), "proxy", {}, artifact, ["unused"])
 
 
-def test_legacy_cli_dispatches_only_oft(tmp_path, monkeypatch):
+def test_legacy_cli_dispatches_supported_backends(tmp_path, monkeypatch):
     backend = tmp_path / "backend"
     head = backend / "prismatic/models/action_heads.py"
     head.parent.mkdir(parents=True)
     head.write_text("OFT marker")
+    marker = backend / "qvla/calibrate_actions.py"
+    marker.parent.mkdir()
+    marker.write_text("Supported route marker")
     calls = []
     monkeypatch.setattr(adapter, "main", calls.append)
     monkeypatch.setattr("sys.argv", ["proxy", "--backend-root", str(backend)])
     assert adapter.maybe_dispatch("proxy")
     assert calls[0][:2] == ["--stage", "proxy"]
     head.unlink()
+    marker.unlink()
     assert not adapter.maybe_dispatch("proxy")
 
 

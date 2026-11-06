@@ -29,16 +29,22 @@ Options:
   --proxy-pt PATH
   --gates-json PATH
   --target-avg-bits FLOAT
-  --bits 0,2,4,8,16
-  --proxy-bits 0,2,4,8
+  --bits 0,4,8,16
+  --proxy-bits 0,4,8,16
   --max-samples N
-  --max-layers N
   --libero-root PATH
   --center-crop True|False
   --method qvla|fp16
-  --rlds-root PATH       Modified LIBERO RLDS training root (required for OFT calibration).
+  --rlds-root PATH       Modified LIBERO RLDS training root (required for calibration).
   --calib-indices PATH   Optional fixed training trajectory/frame index JSONL.
-  --max-prune-ratio N    OFT per-layer pruning cap (default0.01).
+  --max-prune-ratio N    Per-layer pruning cap (default 0.01).
+  --seed N              Default 7.
+  --attention BACKEND    Evaluation: sdpa, eager, flash_attention_2.
+  --calibration-attention BACKEND
+                        Calibration defaults to sdpa for both families.
+  --restore-pruned-fraction N
+                        OpenVLA W8 defaults to 0.25; other profiles use 0.
+  --flash-attn-path PATH Optional installed FA2 overlay for OpenVLA W8.
 EOF
 }
 
@@ -118,6 +124,10 @@ MAX_LAYERS="${MAX_LAYERS:-}"
 LIBERO_ROOT_ARG="${LIBERO_ROOT:-}"
 CENTER_CROP="${CENTER_CROP:-True}"
 SEED="${SEED:-7}"
+QVLA_ATTENTION="${QVLA_ATTENTION:-}"
+QVLA_CALIBRATION_ATTENTION="${QVLA_CALIBRATION_ATTENTION:-}"
+QVLA_RESTORE_PRUNED_FRACTION="${QVLA_RESTORE_PRUNED_FRACTION:-}"
+OPENVLA_FLASH_ATTN_PATH="${OPENVLA_FLASH_ATTN_PATH:-}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -148,6 +158,10 @@ while [[ $# -gt 0 ]]; do
         --libero-root) LIBERO_ROOT_ARG="${2:?missing --libero-root value}"; shift 2 ;;
         --center-crop) CENTER_CROP="${2:?missing --center-crop value}"; shift 2 ;;
         --seed) SEED="${2:?missing --seed value}"; shift 2 ;;
+        --attention) QVLA_ATTENTION="${2:?missing --attention value}"; shift 2 ;;
+        --calibration-attention) QVLA_CALIBRATION_ATTENTION="${2:?missing --calibration-attention value}"; shift 2 ;;
+        --restore-pruned-fraction) QVLA_RESTORE_PRUNED_FRACTION="${2:?missing --restore-pruned-fraction value}"; shift 2 ;;
+        --flash-attn-path) OPENVLA_FLASH_ATTN_PATH="${2:?missing --flash-attn-path value}"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) die "unknown option '$1'" ;;
     esac
@@ -168,9 +182,9 @@ if [[ "$BACKEND" == "openvla_oft" ]]; then
     PROXY_BITS="${PROXY_BITS:-0,4,8,16}"
     MAX_SAMPLES="${MAX_SAMPLES:-512}"
 else
-    BITS="${BITS:-0,2,4,8,16}"
-    PROXY_BITS="${PROXY_BITS:-0,2,4,8}"
-    MAX_SAMPLES="${MAX_SAMPLES:-32}"
+    BITS="${BITS:-0,4,8,16}"
+    PROXY_BITS="${PROXY_BITS:-0,4,8,16}"
+    MAX_SAMPLES="${MAX_SAMPLES:-512}"
 fi
 
 if [[ -z "$PROFILE" ]]; then
@@ -218,6 +232,7 @@ export CUDA_VISIBLE_DEVICES="$FIRST_GPU"
 export HIP_VISIBLE_DEVICES="${HIP_VISIBLE_DEVICES:-$FIRST_GPU}"
 export TOKENIZERS_PARALLELISM="${TOKENIZERS_PARALLELISM:-false}"
 export QVLA_BACKEND_ROOT="$BACKEND_ROOT"
+export QVLA_ATTENTION QVLA_CALIBRATION_ATTENTION QVLA_RESTORE_PRUNED_FRACTION OPENVLA_FLASH_ATTN_PATH
 if [[ -n "$LIBERO_ROOT_ARG" ]]; then
     export LIBERO_ROOT="$LIBERO_ROOT_ARG"
 fi
@@ -344,7 +359,7 @@ if [[ "$ACTION" != "result" ]]; then
     print_plan
 fi
 
-if [[ "$BACKEND" == "openvla_oft" ]]; then
+if [[ -f "${BACKEND_ROOT}/qvla/calibrate_actions.py" ]]; then
     oft_args=(
         --stage "$ACTION" --backend-root "$BACKEND_ROOT" --profile "$PROFILE" --method "$METHOD"
         --pretrained_checkpoint "$OPENVLA_CHECKPOINT" --output-root "$OUTPUT_ROOT"

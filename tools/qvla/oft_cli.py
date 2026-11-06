@@ -1,4 +1,7 @@
-"""Radix adapter for OFT's action-Jacobian QVLA pipeline and verified summaries."""
+"""Radix stage adapter for the OpenVLA and OpenVLA-OFT QVLA routes.
+
+The historical filename and .oft_* stage manifests are retained for compatibility.
+"""
 
 from __future__ import annotations
 
@@ -21,11 +24,14 @@ def is_oft_backend(root):
 
 
 def maybe_dispatch(stage):
-    """Keep old OpenVLA CLIs working; dispatch OFT before their legacy main()."""
+    """Dispatch legacy CLI entrypoints to the selected backend's QVLA package."""
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--backend-root", default=os.environ.get("QVLA_BACKEND_ROOT"))
+    parser.add_argument(
+        "--backend-root",
+        default=os.environ.get("QVLA_BACKEND_ROOT") or ROOT / "third_party/openvla",
+    )
     known, _ = parser.parse_known_args()
-    if not is_oft_backend(known.backend_root):
+    if not (Path(known.backend_root) / "qvla/calibrate_actions.py").is_file():
         return False
     main(["--stage", stage, *sys.argv[1:]])
     return True
@@ -51,7 +57,7 @@ def write(path, value):
 def checkpoint_identity(directory):
     directory = Path(directory)
     if not directory.is_dir():
-        raise ValueError("A local merged OFT checkpoint is required")
+        raise ValueError("A local merged OpenVLA-family checkpoint is required")
     suffixes = {".json", ".py", ".model", ".safetensors", ".pt", ".bin"}
     return {
         path.name: sha(path)
@@ -98,7 +104,7 @@ def stage(args, name, inputs, artifact, command):
                 and previous.get("fingerprint") == fingerprint
                 and previous.get("artifact_sha256") == sha(artifact)
             ):
-                print(f"[oft] Reusing verified {name}: {artifact}", flush=True)
+                print(f"[qvla] Reusing verified {name}: {artifact}", flush=True)
                 return
         raise ValueError(
             f"Unverified or stale {name} artifact: {artifact}; use a new output directory"
@@ -141,25 +147,45 @@ def module(name, *args):
 
 def run(args):
     args.backend_root = args.backend_root.expanduser().resolve()
-    if not is_oft_backend(args.backend_root):
-        raise ValueError("OFT adapter requires the openvla_oft backend")
+    oft = is_oft_backend(args.backend_root)
+    if not (args.backend_root / "qvla/calibrate_actions.py").is_file():
+        raise ValueError("Select a supported OpenVLA/OpenVLA-OFT backend")
+    route = "openvla_oft" if oft else "openvla"
+    args.attention = args.attention or (
+        "sdpa"
+        if oft or args.method == "fp16" or args.target_avg_bits < 8
+        else "flash_attention_2"
+    )
+    args.calibration_attention = args.calibration_attention or "sdpa"
+    if args.restore_pruned_fraction is None:
+        args.restore_pruned_fraction = (
+            0.25 if not oft and args.target_avg_bits == 8 else 0.0
+        )
+    if oft and (
+        args.attention != "sdpa"
+        or args.calibration_attention != "sdpa"
+        or args.restore_pruned_fraction
+    ):
+        raise ValueError(
+            "OFT uses bidirectional SDPA and no OpenVLA-specific pruning repair"
+        )
     if args.method == "qvla" and set(map(int, args.bits.split(","))) - {0, 4, 8, 16}:
         raise ValueError(
-            "This OFT configuration excludes2bit; choose weights from0,4,8,16"
+            "This configuration excludes 2bit; choose weights from 0,4,8,16"
         )
     if args.proxy_bits and set(map(int, args.proxy_bits.split(","))) != {0, 4, 8, 16}:
-        raise ValueError("OFT action calibration requires proxy bits0,4,8,16")
+        raise ValueError("Action calibration requires proxy bits 0,4,8,16")
     if args.max_layers is not None or args.resume or args.percdamp is not None:
         raise ValueError(
-            "Input-Hessian max_layers/resume/percdamp options are not OFT action calibration options"
+            "Input-Hessian max_layers/resume/percdamp options are not action-calibration options"
         )
     if args.center_crop.lower() != "true" or args.model_family != "openvla":
         raise ValueError(
-            "This route uses the official OFT LIBERO center-crop/openvla configuration"
+            "This route uses the official LIBERO center-crop/openvla configuration"
         )
     if args.device not in ("cuda", "cuda:0") or args.dtype not in ("bf16", "bfloat16"):
         raise ValueError(
-            "Select one visible CUDA GPU; OFT inference and fake weights use BF16"
+            "Select one visible CUDA GPU; inference and fake weights use BF16"
         )
     if args.output_root is None:
         location = (
@@ -209,12 +235,15 @@ def run(args):
         print(
             json.dumps(
                 {
-                    "backend": "openvla_oft",
+                    "backend": route,
                     "method": args.method,
                     "samples": args.samples,
                     "bits": args.bits,
                     "target_avg_bits": args.target_avg_bits,
                     "max_prune_ratio": args.max_prune_ratio,
+                    "attention": args.attention,
+                    "calibration_attention": args.calibration_attention,
+                    "restore_pruned_fraction": args.restore_pruned_fraction,
                     "trials_per_task": args.trials,
                     "data_root": str(args.data_root),
                     "output_root": str(args.output_root),
@@ -240,13 +269,25 @@ def run(args):
             "robosuite",
         )
     }
-    common = {"sources": sources, "environment": versions, "seed": args.seed}
+    common = {
+        "sources": sources,
+        "environment": versions,
+        "seed": args.seed,
+        "flash_attn_path": str(Path(args.flash_attn_path).expanduser().resolve())
+        if args.flash_attn_path and not oft
+        else None,
+    }
     libero = ["--libero_root", args.libero_root] if args.libero_root else []
+    calibration_options = [] if oft else ["--attention", args.calibration_attention]
+    evaluation_options = [] if oft else ["--attention", args.attention]
+    if args.flash_attn_path and not oft:
+        calibration_options += ["--flash_attn_path", args.flash_attn_path]
+        evaluation_options += ["--flash_attn_path", args.flash_attn_path]
 
     def build():
         if args.data_root is None:
             raise ValueError(
-                "OFT calibration needs --rlds-root/--data-root or QVLA_RLDS_ROOT; simulator reset images are insufficient"
+                "Calibration needs --rlds-root/--data-root or QVLA_RLDS_ROOT; simulator reset images are insufficient"
             )
         arguments = [
             "--data_root",
@@ -299,6 +340,7 @@ def run(args):
             "checkpoint": checkpoint_identity(str(args.checkpoint.resolve())),
             "records_sha256": sha(args.calib_jsonl),
             "samples": args.samples,
+            "attention": args.calibration_attention,
         }
         stage(
             args,
@@ -321,6 +363,7 @@ def run(args):
                 args.suite,
                 "--memory_fraction",
                 args.calibration_memory_fraction,
+                *calibration_options,
                 *libero,
             ),
         )
@@ -329,7 +372,7 @@ def run(args):
             status["status"] != "complete"
             or status["completed_samples"] != args.samples
         ):
-            raise ValueError("OFT calibration did not complete all requested records")
+            raise ValueError("Calibration did not complete all requested records")
 
     def allocate():
         inputs = {
@@ -338,6 +381,7 @@ def run(args):
             "bits": args.bits,
             "target_avg_bits": args.target_avg_bits,
             "max_prune_ratio": args.max_prune_ratio,
+            "restore_pruned_fraction": args.restore_pruned_fraction,
         }
         stage(
             args,
@@ -356,6 +400,11 @@ def run(args):
                 args.max_prune_ratio,
                 "--out_json",
                 args.gates_json,
+                *(
+                    []
+                    if oft
+                    else ["--restore_pruned_fraction", args.restore_pruned_fraction]
+                ),
             ),
         )
 
@@ -368,6 +417,7 @@ def run(args):
             "trials": args.trials,
             "num_steps_wait": args.num_steps_wait,
             "method": args.method,
+            "attention": args.attention,
             "inference_memory_fraction": args.inference_memory_fraction,
         }
         precision = (
@@ -399,14 +449,13 @@ def run(args):
                 args.inference_memory_fraction,
                 "--run_id_note",
                 args.run_id_note,
+                *evaluation_options,
                 *libero,
             ),
         )
         run_record = json.loads((args.log_dir / "run.json").read_text())
         if run_record["status"] != "complete":
-            raise ValueError(
-                "OFT evaluator did not complete its episode/log verification"
-            )
+            raise ValueError("Evaluator did not complete its episode/log verification")
         env = {
             **os.environ,
             "PYTHONPATH": str(args.backend_root)
@@ -423,10 +472,10 @@ def run(args):
             run_record["trials_per_task"] != args.trials
             or run_record["seed"] != args.seed
         ):
-            raise ValueError("OFT evaluator protocol mismatch")
+            raise ValueError("Evaluator protocol mismatch")
         summary = {
             "task_suite": args.suite,
-            "benchmark": args.profile or "openvla_oft",
+            "benchmark": args.profile or route,
             "quantization": f"QVLA-W{run_record['channel_mean_bits']:g}"
             if args.method == "qvla"
             else "BF16",
@@ -445,7 +494,7 @@ def run(args):
         (args.output_root / "merged_summary.md").write_text(
             f"# LIBERO {args.suite}\n\n{summary['total_successes']}/{summary['total_episodes']} successes "
             f"({100 * summary['total_success_rate']:.1f}%).\n\n"
-            f"Quantization: {summary['quantization']}; seed={args.seed}; verified official OFT evaluation.\n"
+            f"Quantization: {summary['quantization']}; seed={args.seed}; verified OpenVLA-family evaluation.\n"
         )
 
     if args.stage == "run":
@@ -480,6 +529,7 @@ def run(args):
                 args.gates_json,
                 "--out_dir",
                 args.export_dir,
+                *evaluation_options,
                 *libero,
             ),
         )
@@ -504,10 +554,28 @@ def main(argv=None):
     parser.add_argument(
         "--backend-root",
         type=Path,
-        default=os.environ.get("QVLA_BACKEND_ROOT") or ROOT / "third_party/openvla_oft",
+        default=os.environ.get("QVLA_BACKEND_ROOT") or ROOT / "third_party/openvla",
     )
     parser.add_argument("--method", choices=["qvla", "fp16"], default="qvla")
     parser.add_argument("--profile", default=os.environ.get("PROFILE"))
+    parser.add_argument(
+        "--attention",
+        choices=["eager", "sdpa", "flash_attention_2"],
+        default=os.environ.get("QVLA_ATTENTION") or None,
+    )
+    parser.add_argument(
+        "--calibration-attention",
+        choices=["eager", "sdpa", "flash_attention_2"],
+        default=os.environ.get("QVLA_CALIBRATION_ATTENTION") or None,
+    )
+    parser.add_argument(
+        "--restore-pruned-fraction",
+        type=float,
+        default=os.environ.get("QVLA_RESTORE_PRUNED_FRACTION") or None,
+    )
+    parser.add_argument(
+        "--flash-attn-path", default=os.environ.get("OPENVLA_FLASH_ATTN_PATH") or None
+    )
     parser.add_argument("--pretrained_checkpoint", type=Path, dest="checkpoint")
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--calib_jsonl", "--out-jsonl", type=Path)
@@ -556,7 +624,7 @@ def main(argv=None):
     )
     parser.add_argument("--center-crop", default="True")
     parser.add_argument("--num-steps-wait", type=int, default=10)
-    parser.add_argument("--run-id-note", default="radix_oft_qvla")
+    parser.add_argument("--run-id-note", default="radix_qvla")
     parser.add_argument("--model-family", default="openvla")
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--dtype", default="bf16")

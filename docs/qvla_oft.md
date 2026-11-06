@@ -2,7 +2,8 @@
 
 The OFT route uses `third_party/openvla_oft/qvla`. The unified Radix launcher
 and legacy `tools/qvla` CLI entrypoints dispatch to this package when OFT is
-selected. The basic OpenVLA route keeps its existing backend.
+selected. The causal OpenVLA route uses its own QVLA package under the same
+stage adapter; see the [profile and environment guide](qvla_openvla.md).
 
 Calibration uses native8x7 continuous actions with both cameras and8D proprio,
 through the same preprocessing, L1 head, action statistics and bidirectional
