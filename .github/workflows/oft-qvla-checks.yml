@@ -1,0 +1,36 @@
+name: OFT action QVLA checks
+
+on:
+  push:
+    paths: ["third_party/openvla_oft/qvla/**", "tools/qvla/**", "scripts/run*quant*vla.sh", "scripts/run_openvla_qvla.sh", ".github/workflows/oft-qvla-checks.yml"]
+  pull_request:
+    paths: ["third_party/openvla_oft/qvla/**", "tools/qvla/**", "scripts/run*quant*vla.sh", "scripts/run_openvla_qvla.sh", ".github/workflows/oft-qvla-checks.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: |
+          python -m pip install torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'numpy<2' pillow pytest ruff==0.9.10 huggingface-hub==0.25.2 \
+            'transformers @ git+https://github.com/moojink/transformers-openvla-oft.git@bc339d9ad707454c0c115970db43c260067c61ab'
+      - name: Check shell adapters
+        run: |
+          bash -n scripts/run_openvla_qvla.sh scripts/run_awesome_quant_vla.sh
+          ruff check tools/qvla/oft_cli.py --select E9,F,I
+      - name: Check OFT math and integration adapters
+        working-directory: third_party/openvla_oft
+        env:
+          CUDA_VISIBLE_DEVICES: ""
+          OMP_NUM_THREADS: "2"
+        run: |
+          ruff check qvla
+          ruff format qvla --check
+          python -m pytest qvla/tests -q

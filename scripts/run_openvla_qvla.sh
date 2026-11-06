@@ -36,6 +36,9 @@ Options:
   --libero-root PATH
   --center-crop True|False
   --method qvla|fp16
+  --rlds-root PATH       Modified LIBERO RLDS training root (required for OFT calibration).
+  --calib-indices PATH   Optional fixed training trajectory/frame index JSONL.
+  --max-prune-ratio N    OFT per-layer pruning cap (default0.01).
 EOF
 }
 
@@ -105,9 +108,12 @@ CALIB_JSONL="${CALIB_JSONL:-}"
 PROXY_PT="${PROXY_PT:-}"
 GATES_JSON="${GATES_JSON:-}"
 TARGET_AVG_BITS="${TARGET_AVG_BITS:-8.0}"
-BITS="${BITS:-0,2,4,8,16}"
-PROXY_BITS="${PROXY_BITS:-0,2,4,8}"
-MAX_SAMPLES="${MAX_SAMPLES:-32}"
+BITS="${BITS:-}"
+PROXY_BITS="${PROXY_BITS:-}"
+MAX_SAMPLES="${MAX_SAMPLES:-}"
+QVLA_RLDS_ROOT="${QVLA_RLDS_ROOT:-}"
+QVLA_CALIB_INDICES="${QVLA_CALIB_INDICES:-}"
+QVLA_MAX_PRUNE_RATIO="${QVLA_MAX_PRUNE_RATIO:-0.01}"
 MAX_LAYERS="${MAX_LAYERS:-}"
 LIBERO_ROOT_ARG="${LIBERO_ROOT:-}"
 CENTER_CROP="${CENTER_CROP:-True}"
@@ -136,6 +142,9 @@ while [[ $# -gt 0 ]]; do
         --proxy-bits) PROXY_BITS="${2:?missing --proxy-bits value}"; shift 2 ;;
         --max-samples) MAX_SAMPLES="${2:?missing --max-samples value}"; shift 2 ;;
         --max-layers) MAX_LAYERS="${2:?missing --max-layers value}"; shift 2 ;;
+        --rlds-root) QVLA_RLDS_ROOT="${2:?missing --rlds-root value}"; shift 2 ;;
+        --calib-indices) QVLA_CALIB_INDICES="${2:?missing --calib-indices value}"; shift 2 ;;
+        --max-prune-ratio) QVLA_MAX_PRUNE_RATIO="${2:?missing --max-prune-ratio value}"; shift 2 ;;
         --libero-root) LIBERO_ROOT_ARG="${2:?missing --libero-root value}"; shift 2 ;;
         --center-crop) CENTER_CROP="${2:?missing --center-crop value}"; shift 2 ;;
         --seed) SEED="${2:?missing --seed value}"; shift 2 ;;
@@ -154,6 +163,15 @@ case "$BACKEND" in
     *) die "unknown backend '$BACKEND'" ;;
 esac
 [[ -d "$BACKEND_ROOT" ]] || die "backend root not found: $BACKEND_ROOT"
+if [[ "$BACKEND" == "openvla_oft" ]]; then
+    BITS="${BITS:-0,4,8,16}"
+    PROXY_BITS="${PROXY_BITS:-0,4,8,16}"
+    MAX_SAMPLES="${MAX_SAMPLES:-512}"
+else
+    BITS="${BITS:-0,2,4,8,16}"
+    PROXY_BITS="${PROXY_BITS:-0,2,4,8}"
+    MAX_SAMPLES="${MAX_SAMPLES:-32}"
+fi
 
 if [[ -z "$PROFILE" ]]; then
     if [[ "$METHOD" == "fp16" ]]; then
@@ -176,7 +194,11 @@ SUITE_SHORT="$(suite_to_short "$TASK_SUITE")"
 SUITE_SUFFIX="$(suite_to_openvla_suffix "$TASK_SUITE")"
 SUITE="$SUITE_SHORT"
 OUTPUT_ROOT="${OUTPUT_ROOT:-${QUANTVLA_ROOT}/results/awesome_quant_vla/${PROFILE}_${SUITE}}"
-CALIB_JSONL="${CALIB_JSONL:-${OUTPUT_ROOT}/calib/calib.jsonl}"
+if [[ "$BACKEND" == "openvla_oft" ]]; then
+    CALIB_JSONL="${CALIB_JSONL:-${OUTPUT_ROOT}/calib/records.jsonl}"
+else
+    CALIB_JSONL="${CALIB_JSONL:-${OUTPUT_ROOT}/calib/calib.jsonl}"
+fi
 PROXY_PT="${PROXY_PT:-${OUTPUT_ROOT}/proxy/proxy.pt}"
 GATES_JSON="${GATES_JSON:-${OUTPUT_ROOT}/gates/greedy_bits.json}"
 LOG_DIR="${OUTPUT_ROOT}/logs/eval"
@@ -273,7 +295,7 @@ run_eval_qvla() {
         --num-steps-wait "$GR00T_EVAL_INIT_OFFSET"
         --local_log_dir "$LOG_DIR"
         --center-crop "$CENTER_CROP"
-        --run-id-note "qvla_${BACKEND}_${SUITE}_w${TARGET_AVG_BITS}"
+        --run-id-note "${METHOD}_${BACKEND}_${SUITE}_w${TARGET_AVG_BITS}"
         --seed "$SEED"
     )
     if [[ -n "${LIBERO_ROOT:-}" ]]; then
@@ -294,6 +316,7 @@ run_eval_fp16() {
         --local_log_dir "$LOG_DIR" \
         --center_crop "$CENTER_CROP" \
         --run_id_note "fp16_${BACKEND}_${SUITE}" \
+        --seed "$SEED" \
         --use_wandb False
     run_parse
 }
@@ -319,6 +342,25 @@ run_export() {
 
 if [[ "$ACTION" != "result" ]]; then
     print_plan
+fi
+
+if [[ "$BACKEND" == "openvla_oft" ]]; then
+    oft_args=(
+        --stage "$ACTION" --backend-root "$BACKEND_ROOT" --profile "$PROFILE" --method "$METHOD"
+        --pretrained_checkpoint "$OPENVLA_CHECKPOINT" --output-root "$OUTPUT_ROOT"
+        --calib_jsonl "$CALIB_JSONL" --proxy_pt "$PROXY_PT" --gates_path "$GATES_JSON"
+        --local_log_dir "$LOG_DIR" --out_dir "$EXPORT_DIR" --task_suite_name "$TASK_SUITE"
+        --trials "$NUM_TRIALS_PER_TASK" --max-samples "$MAX_SAMPLES"
+        --bits "$BITS" --proxy-bits "$PROXY_BITS" --target-avg-bits "$TARGET_AVG_BITS"
+        --max-prune-ratio "$QVLA_MAX_PRUNE_RATIO" --seed "$SEED"
+        --center-crop "$CENTER_CROP" --num-steps-wait "$GR00T_EVAL_INIT_OFFSET"
+        --run-id-note "qvla_${BACKEND}_${SUITE}_w${TARGET_AVG_BITS}"
+    )
+    [[ -z "$QVLA_RLDS_ROOT" ]] || oft_args+=(--rlds-root "$QVLA_RLDS_ROOT")
+    [[ -z "$QVLA_CALIB_INDICES" ]] || oft_args+=(--calib-indices "$QVLA_CALIB_INDICES")
+    [[ -z "$LIBERO_ROOT_ARG" ]] || oft_args+=(--libero-root "$LIBERO_ROOT_ARG")
+    [[ -z "$MAX_LAYERS" ]] || oft_args+=(--max_layers "$MAX_LAYERS")
+    exec "$PYTHON_BIN" "${QUANTVLA_ROOT}/tools/qvla/oft_cli.py" "${oft_args[@]}"
 fi
 
 case "$ACTION" in

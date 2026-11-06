@@ -1,5 +1,9 @@
 # OpenVLA/QVLA Route
 
+For the repaired OpenVLA-OFT action-Jacobian workflow, use
+[qvla_oft.md](qvla_oft.md). The input-Hessian description and60%/26% rows below
+describe the previous integration, not the repaired OFT path.
+
 quant-vla includes the QVLA/OpenVLA route from AutoLab-SAI-SJTU/QVLA as an integrated third project family.
 
 ## Included Backends

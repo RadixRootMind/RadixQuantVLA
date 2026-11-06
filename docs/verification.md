@@ -192,7 +192,8 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
   --max-samples 32
 ```
 
-Verified results: FP16 `60.0%`, QVLA W8 `26.0%`.
+Historical results from the legacy OFT integration: FP16/BF16 `60.0%`, QVLA W8 `26.0%`.
+For the repaired calibration/evaluation path, see [qvla_oft.md](qvla_oft.md).
 
 ## UniVLA FP16
 
