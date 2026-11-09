@@ -52,7 +52,7 @@ dependencies = [
     "tensorflow==2.15.0",
     "tensorflow_datasets==4.9.3",
     "tensorflow_graphics==2021.12.3",
-    "dlimp @ git+https://github.com/moojink/dlimp_openvla"
+    "dlimp @ git+https://github.com/moojink/dlimp_openvla@040105d256bd28866cc6620621a3d5f7b6b91b46"
 ]
 
 [project.optional-dependencies]

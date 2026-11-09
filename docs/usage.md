@@ -60,9 +60,11 @@ bash scripts/run_awesome_quant_vla.sh groot_w4a8 \
 | `pi05_duquant_w4a8` | Pi0.5/OpenPI generic W4A8 DuQuant. |
 | `pi05_w4a4_rtn` | Pi0.5/OpenPI RTN W4A4 baseline. |
 | `pi05_fp16` | Pi0.5/OpenPI FP16 baseline. |
-| `openvla_fp16` | OpenVLA FP16 LIBERO evaluation. |
+| `openvla_fp16` | OpenVLA BF16 LIBERO evaluation (legacy profile name). |
+| `openvla_qvla_w4` | OpenVLA mixed-bit W4A16. |
 | `openvla_qvla_w8` | OpenVLA QVLA mixed-bit target average 8. |
-| `openvla_oft_fp16` | OpenVLA-OFT FP16 LIBERO evaluation. |
+| `openvla_oft_fp16` | OpenVLA-OFT BF16 LIBERO evaluation (legacy profile name). |
+| `openvla_oft_qvla_w4` | OpenVLA-OFT mixed-bit W4A16. |
 | `openvla_oft_qvla_w8` | OpenVLA-OFT QVLA mixed-bit target average 8. |
 | `pi05_foldquant_w4a4` | Pi0.5 native TensorRT W4A4, LLM + action expert. |
 | `pi05_foldquant_w8a8` | Pi0.5 native TensorRT W8A8, LLM + action expert. |
@@ -151,52 +153,33 @@ For FP16-only OpenPI evaluation, `--openpi-checkpoint gs://openpi-assets/checkpo
 
 ## 7. OpenVLA/QVLA Examples
 
-OpenVLA and OpenVLA-OFT are isolated under `third_party/openvla` and `third_party/openvla_oft`. The unified launcher selects the backend from the profile name.
-
-OpenVLA-OFT FP16:
-
-```bash
-bash scripts/run_awesome_quant_vla.sh openvla_oft_fp16 \
-  --suite spatial \
-  --gpus 0 \
-  --trials 10 \
-  --openvla-python /path/to/openvla-env/bin/python \
-  --openvla-checkpoint "$CHECKPOINTS_ROOT/openvla-7b-oft-finetuned-libero-spatial"
-```
-
-OpenVLA-OFT QVLA W8 end to end:
+Use separate causal OpenVLA and bidirectional OpenVLA-OFT environments. The
+unified launcher selects the backend and default attention/weight recipe from
+the profile. See the [QVLA guide](qvla_openvla.md) for setup and method scope.
 
 ```bash
 bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
-  --suite spatial \
-  --gpus 0 \
-  --trials 10 \
-  --openvla-python /path/to/openvla-env/bin/python \
+  --suite spatial --gpus 0 --trials 50 --seed 7 \
+  --openvla-python /path/to/oft-env/bin/python \
   --openvla-checkpoint "$CHECKPOINTS_ROOT/openvla-7b-oft-finetuned-libero-spatial" \
-  --target-avg-bits 8.0
+  --rlds-root /path/to/modified_libero_rlds --max-samples 512 \
+  --output-root results/oft_qvla_spatial_fresh
 ```
 
-The same route can be run in stages:
+The same arguments support `--action build_calib|proxy|assign|eval|export`.
+Keep arguments and output root fixed across stages. For a small startup check,
+use a fresh output with `--max-samples 8 --trials 1` from preparation onward.
+The old input-Hessian `--max-layers` option is not supported.
 
-```bash
-bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action build_calib
-bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action proxy
-bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action assign
-bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 --suite spatial --action eval
-```
+Use `openvla_oft_qvla_w4` for OFT W4A16. For causal OpenVLA, use
+`openvla_qvla_w4` or `openvla_qvla_w8`, its separate environment and matching
+`openvla-7b-finetuned-libero-spatial` checkpoint. OpenVLA W8 evaluates with
+FlashAttention 2.5.5 by default. OFT requires the pinned author's SDPA fork.
+Activations remain BF16 for all these profiles.
 
-Use a small proxy smoke test before a full proxy build:
-
-```bash
-bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
-  --suite spatial \
-  --action proxy \
-  --max-samples 2 \
-  --max-layers 1 \
-  --openvla-python /path/to/openvla-env/bin/python
-```
-
-Base OpenVLA uses the same commands with `openvla_fp16` or `openvla_qvla_w8` and an `openvla-7b-finetuned-libero-<suite>` checkpoint.
+The compatibility profiles `openvla_fp16` and `openvla_oft_fp16` actually
+compute in BF16. Evaluation faults abort; summaries are written after canonical
+log verification. No new numerical results are bundled with this update.
 
 ## 8. Read Results
 

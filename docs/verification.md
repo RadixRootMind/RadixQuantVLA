@@ -118,9 +118,13 @@ bash scripts/run_awesome_quant_vla.sh pi05_w4a4_gptq \
 
 Verified result: `98.0%`.
 
-## OpenVLA FP16
+## Historical OpenVLA integration checks
 
 Use the OpenVLA-specific conda environment.
+
+The following OpenVLA/OFT commands and numbers describe the legacy integration.
+Use the [updated QVLA guide](qvla_openvla.md) for current W4A16/W8A16
+calibration and verified evaluation; this code update publishes no new scores.
 
 ```bash
 conda activate awesome_qvla_openvla
@@ -192,7 +196,8 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
   --max-samples 32
 ```
 
-Verified results: FP16 `60.0%`, QVLA W8 `26.0%`.
+Historical results from the legacy OFT integration: FP16/BF16 `60.0%`, QVLA W8 `26.0%`.
+For the repaired calibration/evaluation path, see [qvla_oft.md](qvla_oft.md).
 
 ## UniVLA FP16
 

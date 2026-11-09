@@ -54,10 +54,18 @@ Pi0.5/OpenPI profiles:
   pi05_fp16              Pi0.5 FP16 baseline
 
 OpenVLA/QVLA profiles:
-  openvla_fp16           OpenVLA FP16 LIBERO eval
+  openvla_fp16           OpenVLA BF16 LIBERO eval (legacy profile name)
+  openvla_qvla_w4        OpenVLA QVLA mixed-bit target avg 4, A16
   openvla_qvla_w8        OpenVLA QVLA mixed-bit target avg 8
-  openvla_oft_fp16       OpenVLA-OFT FP16 LIBERO eval
+  openvla_oft_fp16       OpenVLA-OFT BF16 LIBERO eval (legacy profile name)
+  openvla_oft_qvla_w4    OpenVLA-OFT QVLA mixed-bit target avg 4, A16
   openvla_oft_qvla_w8    OpenVLA-OFT QVLA mixed-bit target avg 8
+
+OpenVLA/QVLA options:
+  --rlds-root PATH --calib-indices PATH --max-samples N
+  --bits 0,4,8,16 --proxy-bits 0,4,8,16 --max-prune-ratio 0.01
+  --attention sdpa|eager|flash_attention_2 --calibration-attention BACKEND
+  --restore-pruned-fraction FLOAT --flash-attn-path PATH --seed N
 
 UniVLA profiles:
   univla_fp16            UniVLA LIBERO FP16 eval with action decoder
@@ -99,6 +107,10 @@ Pack/checkpoint options:
   --target-avg-bits FLOAT
   --max-samples N
   --max-layers N
+  --rlds-root PATH        Modified LIBERO RLDS root for OFT calibration.
+  --calib-indices PATH    Optional fixed training frame indices for OFT.
+  --max-prune-ratio FLOAT OFT per-layer pruning cap (default0.01).
+  --seed N               OFT/OpenVLA evaluation and calibration seed.
   --foldquant-python PATH
   --foldquant-client-python PATH
   --foldquant-dataset PATH
@@ -308,10 +320,18 @@ MAX_TASKS="${MAX_TASKS:--1}"
 CALIB_JSONL_ARG="${CALIB_JSONL:-}"
 PROXY_PT_ARG="${PROXY_PT:-}"
 GATES_JSON_ARG="${GATES_JSON:-}"
-TARGET_AVG_BITS="${TARGET_AVG_BITS:-8.0}"
-BITS="${BITS:-0,2,4,8,16}"
-PROXY_BITS="${PROXY_BITS:-0,2,4,8}"
-MAX_SAMPLES="${MAX_SAMPLES:-32}"
+TARGET_AVG_BITS="${TARGET_AVG_BITS:-}"
+BITS="${BITS:-}"
+PROXY_BITS="${PROXY_BITS:-}"
+MAX_SAMPLES="${MAX_SAMPLES:-}"
+QVLA_RLDS_ROOT="${QVLA_RLDS_ROOT:-}"
+QVLA_CALIB_INDICES="${QVLA_CALIB_INDICES:-}"
+QVLA_MAX_PRUNE_RATIO="${QVLA_MAX_PRUNE_RATIO:-0.01}"
+SEED="${SEED:-7}"
+QVLA_ATTENTION="${QVLA_ATTENTION:-}"
+QVLA_CALIBRATION_ATTENTION="${QVLA_CALIBRATION_ATTENTION:-}"
+QVLA_RESTORE_PRUNED_FRACTION="${QVLA_RESTORE_PRUNED_FRACTION:-}"
+OPENVLA_FLASH_ATTN_PATH="${OPENVLA_FLASH_ATTN_PATH:-}"
 MAX_LAYERS="${MAX_LAYERS:-}"
 DENOISING_STEPS="${DENOISING_STEPS:-8}"
 REPLAN_STEPS="${REPLAN_STEPS:-5}"
@@ -369,6 +389,14 @@ while [[ $# -gt 0 ]]; do
         --bits) BITS="${2:?missing --bits value}"; shift 2 ;;
         --proxy-bits) PROXY_BITS="${2:?missing --proxy-bits value}"; shift 2 ;;
         --max-samples) MAX_SAMPLES="${2:?missing --max-samples value}"; shift 2 ;;
+        --rlds-root) QVLA_RLDS_ROOT="${2:?missing --rlds-root value}"; shift 2 ;;
+        --calib-indices) QVLA_CALIB_INDICES="${2:?missing --calib-indices value}"; shift 2 ;;
+        --max-prune-ratio) QVLA_MAX_PRUNE_RATIO="${2:?missing --max-prune-ratio value}"; shift 2 ;;
+        --seed) SEED="${2:?missing --seed value}"; shift 2 ;;
+        --attention) QVLA_ATTENTION="${2:?missing --attention value}"; shift 2 ;;
+        --calibration-attention) QVLA_CALIBRATION_ATTENTION="${2:?missing --calibration-attention value}"; shift 2 ;;
+        --restore-pruned-fraction) QVLA_RESTORE_PRUNED_FRACTION="${2:?missing --restore-pruned-fraction value}"; shift 2 ;;
+        --flash-attn-path) OPENVLA_FLASH_ATTN_PATH="${2:?missing --flash-attn-path value}"; shift 2 ;;
         --max-layers) MAX_LAYERS="${2:?missing --max-layers value}"; shift 2 ;;
         --denoising-steps) DENOISING_STEPS="${2:?missing --denoising-steps value}"; shift 2 ;;
         --replan-steps) REPLAN_STEPS="${2:?missing --replan-steps value}"; shift 2 ;;
@@ -610,6 +638,15 @@ case "$PROFILE" in
         WBITS=16
         ABITS=16
         ;;
+    openvla_qvla_w4)
+        MODEL_KIND="openvla"
+        LAUNCHER="${SCRIPT_DIR}/run_openvla_qvla.sh"
+        METHOD="qvla"
+        OPENVLA_BACKEND="${OPENVLA_BACKEND_ARG:-openvla}"
+        TARGET_AVG_BITS="${TARGET_AVG_BITS:-4.0}"
+        WBITS=4
+        ABITS=16
+        ;;
     openvla_qvla_w8|openvla_qvla)
         MODEL_KIND="openvla"
         LAUNCHER="${SCRIPT_DIR}/run_openvla_qvla.sh"
@@ -625,6 +662,15 @@ case "$PROFILE" in
         METHOD="fp16"
         OPENVLA_BACKEND="${OPENVLA_BACKEND_ARG:-openvla_oft}"
         WBITS=16
+        ABITS=16
+        ;;
+    openvla_oft_qvla_w4)
+        MODEL_KIND="openvla"
+        LAUNCHER="${SCRIPT_DIR}/run_openvla_qvla.sh"
+        METHOD="qvla"
+        OPENVLA_BACKEND="${OPENVLA_BACKEND_ARG:-openvla_oft}"
+        TARGET_AVG_BITS="${TARGET_AVG_BITS:-4.0}"
+        WBITS=4
         ABITS=16
         ;;
     openvla_oft_qvla_w8|openvla-oft_qvla_w8|openvla_oft_qvla)
@@ -719,11 +765,23 @@ elif [[ "$MODEL_KIND" == "openvla" ]]; then
     else
         OPENVLA_CHECKPOINT="${CHECKPOINTS_ROOT}/openvla-7b-finetuned-libero-${OPENVLA_SUITE_SUFFIX}"
     fi
-    CALIB_JSONL="${CALIB_JSONL_ARG:-${OUTPUT_ROOT}/calib/calib.jsonl}"
+    if [[ "$OPENVLA_BACKEND" == "openvla_oft" || "$OPENVLA_BACKEND" == "openvla-oft" ]]; then
+        BITS="${BITS:-0,4,8,16}"
+        PROXY_BITS="${PROXY_BITS:-0,4,8,16}"
+        MAX_SAMPLES="${MAX_SAMPLES:-512}"
+        CALIB_JSONL="${CALIB_JSONL_ARG:-${OUTPUT_ROOT}/calib/records.jsonl}"
+    else
+        BITS="${BITS:-0,4,8,16}"
+        PROXY_BITS="${PROXY_BITS:-0,4,8,16}"
+        MAX_SAMPLES="${MAX_SAMPLES:-512}"
+        CALIB_JSONL="${CALIB_JSONL_ARG:-${OUTPUT_ROOT}/calib/calib.jsonl}"
+    fi
     PROXY_PT="${PROXY_PT_ARG:-${OUTPUT_ROOT}/proxy/proxy.pt}"
     GATES_JSON="${GATES_JSON_ARG:-${OUTPUT_ROOT}/gates/greedy_bits.json}"
     export METHOD WBITS ABITS OPENVLA_BACKEND OPENVLA_PYTHON OPENVLA_CHECKPOINT
     export CALIB_JSONL PROXY_PT GATES_JSON TARGET_AVG_BITS BITS PROXY_BITS MAX_SAMPLES MAX_LAYERS
+    export QVLA_RLDS_ROOT QVLA_CALIB_INDICES QVLA_MAX_PRUNE_RATIO SEED
+    export QVLA_ATTENTION QVLA_CALIBRATION_ATTENTION QVLA_RESTORE_PRUNED_FRACTION OPENVLA_FLASH_ATTN_PATH
 elif [[ "$MODEL_KIND" == "starvla" ]]; then
     STARVLA_PYTHON="${STARVLA_PYTHON_ARG:-python}"
     STARVLA_CHECKPOINT="${STARVLA_CHECKPOINT_ARG:-${CHECKPOINTS_ROOT}/starvla/Qwen3-VL-OFT-LIBERO-4in1/checkpoints/steps_50000_pytorch_model.pt}"

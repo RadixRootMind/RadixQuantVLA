@@ -259,4 +259,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from oft_cli import maybe_dispatch
+    if not maybe_dispatch("export"):
+        main()
