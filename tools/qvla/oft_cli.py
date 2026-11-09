@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 import sys
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -53,7 +53,7 @@ def write(path, value):
     temporary.replace(path)
 
 
-@lru_cache(maxsize=None)
+@cache
 def checkpoint_identity(directory):
     directory = Path(directory)
     if not directory.is_dir():
