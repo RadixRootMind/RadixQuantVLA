@@ -190,7 +190,7 @@ PY
 
 ## 5. OpenVLA/QVLA 环境
 
-OpenVLA 和 OpenVLA-OFT 依赖自己的 `prismatic` 包，建议单独建环境：
+OpenVLA 与 OpenVLA-OFT 的 `prismatic` 和 Transformers 约束不同，两个后端也应分别使用 Python 3.10 环境，不能与 GR00T/Pi0.5 或彼此混装。下面示例准备本次复验使用的 OpenVLA-OFT 环境：
 
 ```bash
 conda create -n awesome_qvla_openvla python=3.10 -y
@@ -198,11 +198,16 @@ conda activate awesome_qvla_openvla
 
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
-python -m pip install -e "$AWESOME_QVLA_ROOT/third_party/openvla" --no-build-isolation
 python -m pip install -e "$AWESOME_QVLA_ROOT/third_party/openvla_oft" --no-build-isolation
-python -m pip install "imageio[ffmpeg]" "protobuf==3.20.3" "tensorflow==2.15.0" "tensorflow-datasets==4.9.3" "tensorflow-metadata==1.14.0"
+python -m pip install -r "$AWESOME_QVLA_ROOT/third_party/openvla_oft/qvla/requirements.txt"
+python -m pip install -r "$AWESOME_QVLA_ROOT/third_party/openvla_oft/experiments/robot/libero/libero_requirements.txt"
+python -m pip install -e "$LIBERO_ROOT"
 python -m pip install --no-user "numpy==1.26.4" "opencv-python-headless==4.9.0.80"
 ```
+
+因果 OpenVLA 路线请新建另一个环境，安装 `third_party/openvla` 及其
+`qvla/requirements.txt`；不要覆盖到 OFT 环境中，因为两个后端存在同名包，
+但需要不同的注意力语义。
 
 国内镜像如果解析不到 `accelerate`、`setuptools` 等包，可以临时切回官方 PyPI：
 
@@ -218,8 +223,11 @@ export CKPT="$CHECKPOINTS_ROOT/openvla-7b-oft-finetuned-libero-spatial"
 
 python - <<'PY'
 import os
+from future.utils import with_metaclass
+from libero.libero.envs import OffScreenRenderEnv
 from transformers import AutoProcessor
 processor = AutoProcessor.from_pretrained(os.environ["CKPT"], trust_remote_code=True, local_files_only=True)
+print("LIBERO and future imports ok")
 print("processor ok:", type(processor))
 PY
 ```

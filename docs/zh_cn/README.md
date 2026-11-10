@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
   <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
-  <img src="https://img.shields.io/badge/Precision-W4A8%20%7C%20W4A4%20%7C%20W8A8%20%7C%20Mixed--bit%20W8-orange" alt="Quantization precision">
+  <img src="https://img.shields.io/badge/Precision-W4A8%20%7C%20W4A4%20%7C%20W8A8%20%7C%20Mixed--bit%20W4A16%2FW8A16-orange" alt="Quantization precision">
   <img src="https://img.shields.io/badge/Methods-GPTQ%20%7C%20RTN%20%7C%20DuQuant%20%7C%20QVLA%20%7C%20FoldQuant-blue" alt="Quantization methods">
   <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
   <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
@@ -71,6 +71,7 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 | 时间 | 更新 |
 | --- | --- |
+| 2026-11 | 修复后的 OpenVLA-OFT QVLA W8A16 路线完成 LIBERO Spatial 复验：相同 100 回合、seed 7 协议下，BF16 为 99.0%，mixed-bit W8A16 为 98.0%。 |
 | 2026-10 | 完成 Pi0.5 与 GR00T N1.5 的 FoldQuantVLA 原生 W4A4/W8A8 路线接入，覆盖量化 checkpoint、ONNX、TensorRT engine、数值验证、时延测试和 LIBERO 评测。 |
 | 2026-09 | 项目重命名并重新定位为 `RadixQuantVLA`，README 按统一 VLA 量化与部署架构重塑。 |
 | 2026-08 | StarVLA-OFT FP16/BF16 LIBERO 路线完成集成和验证。 |
@@ -83,7 +84,7 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 | 层级 | 作用 |
 | --- | --- |
 | 统一路线入口 | 使用同一个脚本入口管理 GR00T、Pi0.5/OpenPI、OpenVLA、OpenVLA-OFT、UniVLA 和 StarVLA。 |
-| 量化路线整合 | 覆盖 W4A8、W4A4、GPTQ、RTN、DuQuant、QVLA mixed-bit W8，以及 FoldQuant 原生 TensorRT W4A4/W8A8。 |
+| 量化路线整合 | 覆盖 W4A8、W4A4、GPTQ、RTN、DuQuant、QVLA mixed-bit W4A16/W8A16，以及 FoldQuant 原生 TensorRT W4A4/W8A8。 |
 | LIBERO 评测 | 统一 task suite、rollout、日志和 merged summary 输出。 |
 | 产物规范化 | 统一 logs、summaries、rollouts、act_stats、packs、proxy、gates、calib 等输出位置。 |
 | 可复现说明 | 为主要路线保留环境、checkpoint、常见修复和验证结果。 |
@@ -93,6 +94,8 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 以下结果来自合并后的本地工程验证，用于说明路线可以在本仓库中端到端跑通，不作为论文官方 benchmark 数字。
 
+修复后的 OpenVLA-OFT 两项结果使用同一 Spatial merged checkpoint、每任务 10 次（共 100 回合）和 seed 7。W8A16 使用 32 个训练 RLDS 校准样本，候选 bit 为 `0,4,8,16`；权重采用伪量化，激活和实际计算保持 BF16。详见 [QVLA 路线说明](../qvla_openvla.md)。
+
 | Profile | 模型 | Suite | 路线 | 结果 |
 | --- | --- | --- | --- | ---: |
 | `groot_w4a8` | GR00T-N1.5 | LIBERO Object | Runtime DuQuant/ATM/OHB | 82.0% |
@@ -100,8 +103,8 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 | `pi05_w4a4_gptq` | Pi0.5/OpenPI | LIBERO Object | W4A4 GPTQ/SVD-Hadamard pack | 98.0% |
 | `openvla_fp16` | OpenVLA | LIBERO Spatial | FP16 baseline | 70.0% |
 | `openvla_qvla_w8` | OpenVLA | LIBERO Spatial | QVLA mixed-bit W8 | 80.0% |
-| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | FP16 baseline | 60.0% |
-| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8 | 26.0% |
+| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | BF16 baseline | 99.0% |
+| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8A16 | 98.0% |
 | `univla_fp16` | UniVLA | LIBERO Spatial | FP16 + action decoder | 96.0% |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | FP16/BF16 policy-server 评测 | 99.0% |
 | `pi05_foldquant_w4a4` | Pi0.5/OpenPI | 四套 LIBERO suite | 原生 TensorRT W4A4 | 98.25% |
@@ -128,8 +131,8 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 | --- | --- | --- |
 | GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn`, `groot_n15_foldquant_w4a4`, `groot_n15_foldquant_w8a8` | 在原有 FP16/runtime 路线外，新增 FoldQuant 原生 TensorRT INT4/INT8 checkpoint、ONNX、engine、验证、性能测试和评测。 |
 | Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn`, `pi05_foldquant_w4a4`, `pi05_foldquant_w8a8` | 在原有 OpenPI service 路线外，新增 FoldQuant 原生 TensorRT INT4/INT8 部署产物与评测。 |
-| OpenVLA | `openvla_fp16`, `openvla_qvla_w8` | 支持 FP16 baseline 和 QVLA mixed-bit W8 评测。 |
-| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w8` | 支持 FP16 baseline 和 QVLA mixed-bit W8 评测。 |
+| OpenVLA | `openvla_fp16`, `openvla_qvla_w4`, `openvla_qvla_w8` | 支持 BF16 baseline 和 QVLA mixed-bit W4A16/W8A16 评测。 |
+| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w4`, `openvla_oft_qvla_w8` | 支持 BF16 baseline 和 QVLA mixed-bit W4A16/W8A16 评测；W8A16 已在 Spatial 复验为 98.0%。 |
 | UniVLA | `univla_fp16` | 支持带外部 action decoder 的 FP16 评测；量化路线暂不作为已验证路线发布。 |
 | StarVLA | `starvla_oft_fp16`, `starvla_gr00t_fp16`, `starvla_pi_fp16`, `starvla_fast_fp16` | StarVLA-OFT FP16/BF16 已验证；其它 FP16/BF16 路线需要对应 checkpoint；量化路线后续需要适配 Qwen-VL/action head。 |
 | WAM 扩展 | 规划中 | QuantWAMs 风格的闭环校准、video-action 任务目标感知精度分配属于后续研究方向。 |

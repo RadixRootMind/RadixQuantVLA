@@ -4,3 +4,4 @@ bddl
 easydict
 cloudpickle
 gym
+future==0.18.3

@@ -241,7 +241,7 @@ If GR00T server startup fails with `cannot import name 'VideoInput' from 'transf
 
 ## 7. OpenVLA/QVLA Environment
 
-OpenVLA and OpenVLA-OFT bring their own `prismatic` package and dependency constraints. For reproducible QVLA runs, use a separate conda environment instead of mixing these packages into the GR00T/Pi0.5 environment.
+OpenVLA and OpenVLA-OFT bring different `prismatic` and Transformers constraints. Use one Python 3.10 environment per backend rather than mixing either backend with GR00T/Pi0.5 or with each other. The example below prepares the OpenVLA-OFT environment used by the repaired validation.
 
 ```bash
 conda create -n awesome_qvla_openvla python=3.10 -y
@@ -249,11 +249,17 @@ conda activate awesome_qvla_openvla
 
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
-python -m pip install -e "$AWESOME_QVLA_ROOT/third_party/openvla" --no-build-isolation
 python -m pip install -e "$AWESOME_QVLA_ROOT/third_party/openvla_oft" --no-build-isolation
-python -m pip install "imageio[ffmpeg]" "protobuf==3.20.3" "tensorflow==2.15.0" "tensorflow-datasets==4.9.3" "tensorflow-metadata==1.14.0"
+python -m pip install -r "$AWESOME_QVLA_ROOT/third_party/openvla_oft/qvla/requirements.txt"
+python -m pip install -r "$AWESOME_QVLA_ROOT/third_party/openvla_oft/experiments/robot/libero/libero_requirements.txt"
+python -m pip install -e "$LIBERO_ROOT"
 python -m pip install --no-user "numpy==1.26.4" "opencv-python-headless==4.9.0.80"
 ```
+
+For the causal OpenVLA route, create another environment and install
+`third_party/openvla` plus its own `qvla/requirements.txt`; do not overlay it on
+the OFT environment because both backends expose packages with the same names
+but require different attention semantics.
 
 If your package index is a domestic mirror and cannot resolve packages such as `accelerate`, switch to a mirror that serves PyPI packages correctly or temporarily use the official PyPI index:
 
@@ -275,8 +281,11 @@ export CKPT="$CHECKPOINTS_ROOT/openvla-7b-oft-finetuned-libero-spatial"
 
 python - <<'PY'
 import os
+from future.utils import with_metaclass
+from libero.libero.envs import OffScreenRenderEnv
 from transformers import AutoProcessor
 processor = AutoProcessor.from_pretrained(os.environ["CKPT"], trust_remote_code=True, local_files_only=True)
+print("LIBERO and future imports ok")
 print("processor ok:", type(processor))
 PY
 ```

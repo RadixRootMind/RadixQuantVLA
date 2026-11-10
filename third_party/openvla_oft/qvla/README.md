@@ -29,8 +29,18 @@ L1-regression LIBERO checkpoint with eight actions per policy call.
   indices, instruction-only subsets, most-sensitive-channel forward refinement
   and short-rollout cross-validation are not supplied or reproduced here.
 
-No experiment results, calibration images, channel assignments, model weights,
-logs or videos are included in this code release.
+## Radix validation reference
+
+At RadixQuantVLA commit `6fa2cf0`, using the pinned merged Spatial checkpoint
+revision below, 10 trials per task (100 episodes), and seed 7, the BF16 baseline
+reached 99.0%. QVLA W8A16 reached 98.0% after calibration on
+32 training-RLDS samples with candidate bits `0,4,8,16`. The final mean allocated
+bit width was `7.999997820970975`, with a 1% per-layer pruning cap.
+
+These are single-seed local engineering results and are not official paper
+numbers. The route uses fake weights with BF16 activations and computation, so
+it does not establish native integer speed or memory gains. Calibration images,
+channel assignments, model weights, logs and videos are not committed.
 
 ## Installation
 
@@ -47,11 +57,22 @@ python -m pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 \
   --index-url https://download.pytorch.org/whl/cu118
 python -m pip install -e .
 python -m pip install -r qvla/requirements.txt
+python -m pip install -r experiments/robot/libero/libero_requirements.txt
 
 git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git third_party/LIBERO
 git -C third_party/LIBERO checkout 8f1084e3132a39270c3a13ebe37270a43ece2a01
 python -m pip install -e third_party/LIBERO
 export LIBERO_ROOT="$PWD/third_party/LIBERO"
+```
+
+Verify the dependencies that are required before LIBERO environment import:
+
+```bash
+python - <<'PY'
+from future.utils import with_metaclass
+from libero.libero.envs import OffScreenRenderEnv
+print("LIBERO dependency imports ok")
+PY
 ```
 
 The package pins the author's bidirectional Transformers fork to

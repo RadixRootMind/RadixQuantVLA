@@ -330,7 +330,7 @@ run_eval_fp16() {
         --num_steps_wait "$GR00T_EVAL_INIT_OFFSET" \
         --local_log_dir "$LOG_DIR" \
         --center_crop "$CENTER_CROP" \
-        --run_id_note "fp16_${BACKEND}_${SUITE}" \
+        --run_id_note "bf16_${BACKEND}_${SUITE}" \
         --seed "$SEED" \
         --use_wandb False
     run_parse
@@ -342,7 +342,7 @@ run_parse() {
         --output-root "$OUTPUT_ROOT" \
         --task-suite-name "$TASK_SUITE" \
         --benchmark "${PROFILE}_${SUITE}" \
-        --quantization "$([[ "$METHOD" == "fp16" ]] && echo FP16 || echo QVLA-W${TARGET_AVG_BITS})" \
+        --quantization "$([[ "$METHOD" == "fp16" ]] && echo BF16 || echo QVLA-W${TARGET_AVG_BITS}A16)" \
         --gpus "$GPU_LIST"
 }
 
@@ -360,6 +360,11 @@ if [[ "$ACTION" != "result" ]]; then
 fi
 
 if [[ -f "${BACKEND_ROOT}/qvla/calibrate_actions.py" ]]; then
+    if [[ "$METHOD" == "fp16" ]]; then
+        run_id_note="bf16_${BACKEND}_${SUITE}"
+    else
+        run_id_note="qvla_${BACKEND}_${SUITE}_w${TARGET_AVG_BITS}a16"
+    fi
     oft_args=(
         --stage "$ACTION" --backend-root "$BACKEND_ROOT" --profile "$PROFILE" --method "$METHOD"
         --pretrained_checkpoint "$OPENVLA_CHECKPOINT" --output-root "$OUTPUT_ROOT"
@@ -369,7 +374,7 @@ if [[ -f "${BACKEND_ROOT}/qvla/calibrate_actions.py" ]]; then
         --bits "$BITS" --proxy-bits "$PROXY_BITS" --target-avg-bits "$TARGET_AVG_BITS"
         --max-prune-ratio "$QVLA_MAX_PRUNE_RATIO" --seed "$SEED"
         --center-crop "$CENTER_CROP" --num-steps-wait "$GR00T_EVAL_INIT_OFFSET"
-        --run-id-note "qvla_${BACKEND}_${SUITE}_w${TARGET_AVG_BITS}"
+        --run-id-note "$run_id_note"
     )
     [[ -z "$QVLA_RLDS_ROOT" ]] || oft_args+=(--rlds-root "$QVLA_RLDS_ROOT")
     [[ -z "$QVLA_CALIB_INDICES" ]] || oft_args+=(--calib-indices "$QVLA_CALIB_INDICES")

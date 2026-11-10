@@ -11,8 +11,8 @@
 | `pi05_w4a4_gptq` | Pi0.5/OpenPI | LIBERO Object | 每任务 10 次 | 98.0% | GPTQ pack 路线 |
 | `openvla_fp16` | OpenVLA | LIBERO Spatial | 验证运行 | 70.0% | FP16 baseline |
 | `openvla_qvla_w8` | OpenVLA | LIBERO Spatial | 验证运行 | 80.0% | QVLA mixed-bit W8 |
-| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | 每任务 10 次 | 60.0% | FP16 baseline |
-| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 每任务 10 次 | 26.0% | QVLA mixed-bit W8 |
+| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | 每任务 10 次 | 99.0% | BF16 baseline，seed 7 |
+| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 每任务 10 次 | 98.0% | QVLA mixed-bit W8A16，32 个 RLDS 样本，seed 7 |
 | `univla_fp16` | UniVLA | LIBERO Spatial | 每任务 10 次 | 96.0% | FP16，使用 action decoder |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | 每任务 10 次 | 99.0% | FP16/BF16 policy-server 路线 |
 | `pi05_foldquant_w4a4` | Pi0.5/OpenPI | 四套 LIBERO suite | 每任务 20 次 | 98.25% | 原生 TensorRT W4A4；独立 RTX 3060 服务器证据 |
@@ -132,6 +132,8 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
   --output-root "$AWESOME_QVLA_ROOT/results/verify/openvla_oft_qvla_w8_spatial" \
   --max-samples 32
 ```
+
+修复后的路线在同一 Spatial checkpoint、每任务 10 次（共 100 回合）、seed 7 条件下完成复验：BF16 为 `99.0%`，QVLA mixed-bit W8A16 为 `98.0%`。W8A16 使用 32 个训练 RLDS 校准样本，候选 bit 为 `0,4,8,16`，最终平均分配 bit 为 `7.999997820970975`，每层最多剪枝 1%。该路线属于 BF16 激活与计算下的权重伪量化，不代表原生整数加速；结果为单 seed 本地工程验证。旧版 `60.0%` 与 `26.0%` 仅保留为历史记录。详见 [qvla_oft.md](../qvla_oft.md)。
 
 ## UniVLA FP16
 

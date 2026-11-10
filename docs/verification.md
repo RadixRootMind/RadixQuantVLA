@@ -13,8 +13,8 @@ The numbers below are local engineering validation results. They show that each 
 | `pi05_w4a4_gptq` | Pi0.5/OpenPI | LIBERO Object | 10 per task | 98.0% | GPTQ pack route |
 | `openvla_fp16` | OpenVLA | LIBERO Spatial | validation run | 70.0% | FP16 baseline route |
 | `openvla_qvla_w8` | OpenVLA | LIBERO Spatial | validation run | 80.0% | QVLA mixed-bit W8 route |
-| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | 10 per task | 60.0% | FP16 baseline route |
-| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 10 per task | 26.0% | QVLA mixed-bit W8 route |
+| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | 10 per task | 99.0% | BF16 baseline, seed 7 |
+| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | 10 per task | 98.0% | QVLA mixed-bit W8A16, 32 RLDS samples, seed 7 |
 | `univla_fp16` | UniVLA | LIBERO Spatial | 10 per task | 96.0% | FP16 route with action decoder |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | 10 per task | 99.0% | FP16/BF16 policy-server route |
 | `pi05_foldquant_w4a4` | Pi0.5/OpenPI | All four suites | 20 per task | 98.25% | Native TensorRT W4A4; separate RTX 3060 integration evidence |
@@ -118,13 +118,13 @@ bash scripts/run_awesome_quant_vla.sh pi05_w4a4_gptq \
 
 Verified result: `98.0%`.
 
-## Historical OpenVLA integration checks
+## OpenVLA integration checks
 
 Use the OpenVLA-specific conda environment.
 
-The following OpenVLA/OFT commands and numbers describe the legacy integration.
-Use the [updated QVLA guide](qvla_openvla.md) for current W4A16/W8A16
-calibration and verified evaluation; this code update publishes no new scores.
+The causal OpenVLA rows retain the earlier integration results. The OpenVLA-OFT
+rows below use the repaired W4A16/W8A16 calibration and evaluation path; see the
+[updated QVLA guide](qvla_openvla.md) for the method boundary and environment.
 
 ```bash
 conda activate awesome_qvla_openvla
@@ -196,8 +196,14 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
   --max-samples 32
 ```
 
-Historical results from the legacy OFT integration: FP16/BF16 `60.0%`, QVLA W8 `26.0%`.
-For the repaired calibration/evaluation path, see [qvla_oft.md](qvla_oft.md).
+Repaired-path results under the same Spatial checkpoint, 10 trials per task
+(100 episodes), and seed 7: BF16 `99.0%`, QVLA mixed-bit W8A16 `98.0%`.
+The W8A16 run uses 32 training-RLDS calibration samples,
+candidate bits `0,4,8,16`, final mean allocated bits `7.999997820970975`, and a
+1% per-layer pruning cap. It is fake-weight quantization with BF16 activations
+and computation, not native integer acceleration. These are single-seed local
+engineering results. Legacy OFT rows of `60.0%` and `26.0%` are retained only
+as historical records. See [qvla_oft.md](qvla_oft.md) for details.
 
 ## UniVLA FP16
 

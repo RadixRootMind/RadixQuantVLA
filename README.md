@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/stars/RadixRootMind/RadixQuantVLA?style=flat&logo=github&label=stars" alt="GitHub stars">
   <img src="https://img.shields.io/badge/Models-GR00T%20%7C%20Pi0.5%20%7C%20OpenVLA%20%7C%20UniVLA%20%7C%20StarVLA-blue" alt="Supported models">
-  <img src="https://img.shields.io/badge/Precision-W4A8%20%7C%20W4A4%20%7C%20W8A8%20%7C%20Mixed--bit%20W8-orange" alt="Quantization precision">
+  <img src="https://img.shields.io/badge/Precision-W4A8%20%7C%20W4A4%20%7C%20W8A8%20%7C%20Mixed--bit%20W4A16%2FW8A16-orange" alt="Quantization precision">
   <img src="https://img.shields.io/badge/Methods-GPTQ%20%7C%20RTN%20%7C%20DuQuant%20%7C%20QVLA%20%7C%20FoldQuant-blue" alt="Quantization methods">
   <img src="https://img.shields.io/badge/Benchmark-LIBERO-green" alt="LIBERO benchmark">
   <img src="https://img.shields.io/badge/Verified-A100--40GB-purple" alt="Verified on A100 40GB">
@@ -71,6 +71,7 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 | Date | Update |
 | --- | --- |
+| 2026-11 | Repaired OpenVLA-OFT QVLA W8A16 route revalidated on LIBERO Spatial: BF16 99.0% and mixed-bit W8A16 98.0% under the same 100-episode, seed-7 protocol. |
 | 2026-10 | FoldQuantVLA native W4A4/W8A8 routes integrated for Pi0.5 and GR00T N1.5, including quantized checkpoints, ONNX export, TensorRT engine build, numerical verification, latency benchmark, and LIBERO evaluation. |
 | 2026-09 | Project renamed and repositioned as `RadixQuantVLA`. README rebuilt around a unified VLA quantization and deployment architecture. |
 | 2026-08 | StarVLA-OFT FP16/BF16 LIBERO route integrated and validated. |
@@ -83,7 +84,7 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 | Layer | Purpose |
 | --- | --- |
 | Unified route launcher | One command surface for GR00T, Pi0.5/OpenPI, OpenVLA, OpenVLA-OFT, UniVLA, and StarVLA routes. |
-| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, ATM/OHB, QVLA mixed-bit W8, and FoldQuant native TensorRT W4A4/W8A8. |
+| Quantization route integration | W4A8, W4A4, GPTQ, RTN, DuQuant, ATM/OHB, QVLA mixed-bit W4A16/W8A16, and FoldQuant native TensorRT W4A4/W8A8. |
 | LIBERO evaluation | Consistent task-suite evaluation, rollout handling, logs, and merged summaries. |
 | Artifact normalization | Standard locations for logs, summaries, rollouts, activation statistics, packs, proxy files, gates, and calibration files. |
 | Reproducibility notes | Environment, checkpoint, known-fix, and validation documentation for each major route. |
@@ -93,10 +94,10 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 These are local engineering validation results after integration. They show that the listed routes run end-to-end in this repository. They are not claimed as official paper benchmark numbers.
 
-The OpenVLA/OpenVLA-OFT rows below describe the legacy integration. The updated
-W4A16/W8A16 implementations and separate environment requirements are documented
-in the [QVLA route guide](docs/qvla_openvla.md). This update includes code only;
-new experiment results and generated artifacts are not bundled.
+The repaired OpenVLA-OFT rows use the same merged Spatial checkpoint, 10 trials
+per task (100 episodes), and seed 7. W8A16 uses 32 training-RLDS calibration
+samples and candidate bits `0,4,8,16`; weights are fake-quantized while
+activations and computation remain BF16. See the [QVLA route guide](docs/qvla_openvla.md).
 
 | Profile | Model | Suite | Route | Result |
 | --- | --- | --- | --- | ---: |
@@ -105,8 +106,8 @@ new experiment results and generated artifacts are not bundled.
 | `pi05_w4a4_gptq` | Pi0.5/OpenPI | LIBERO Object | W4A4 GPTQ/SVD-Hadamard pack | 98.0% |
 | `openvla_fp16` | OpenVLA | LIBERO Spatial | FP16 baseline | 70.0% |
 | `openvla_qvla_w8` | OpenVLA | LIBERO Spatial | QVLA mixed-bit W8 | 80.0% |
-| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | FP16 baseline | 60.0% |
-| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8 | 26.0% |
+| `openvla_oft_fp16` | OpenVLA-OFT | LIBERO Spatial | BF16 baseline | 99.0% |
+| `openvla_oft_qvla_w8` | OpenVLA-OFT | LIBERO Spatial | QVLA mixed-bit W8A16 | 98.0% |
 | `univla_fp16` | UniVLA | LIBERO Spatial | FP16 with action decoder | 96.0% |
 | `starvla_oft_fp16` | StarVLA-OFT | LIBERO Spatial | FP16/BF16 policy-server evaluation | 99.0% |
 | `pi05_foldquant_w4a4` | Pi0.5/OpenPI | All four LIBERO suites | Native TensorRT W4A4 | 98.25% |
@@ -134,7 +135,7 @@ The original merged-route validation rows above were reproduced on the following
 | GR00T-N1.5 | `groot_fp16`, `groot_w4a8`, `groot_w4a4_gptq`, `groot_w4a4_duquant`, `groot_w4a4_rtn`, `groot_n15_foldquant_w4a4`, `groot_n15_foldquant_w8a8` | Existing FP16/runtime routes plus FoldQuant native TensorRT INT4/INT8 checkpoints, ONNX, engines, verification, benchmark, and evaluation. |
 | Pi0.5/OpenPI | `pi05_fp16`, `pi05_w4a8_duquant`, `pi05_w4a4_gptq`, `pi05_w4a4_rtn`, `pi05_foldquant_w4a4`, `pi05_foldquant_w8a8` | Existing OpenPI service routes plus FoldQuant native TensorRT INT4/INT8 deployment artifacts and evaluation. |
 | OpenVLA | `openvla_fp16`, `openvla_qvla_w4`, `openvla_qvla_w8` | Causal OpenVLA, soft-action sensitivity and mixed-bit W4A16/W8A16. The legacy fp16 profile computes in BF16. |
-| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w4`, `openvla_oft_qvla_w8` | Native continuous-action sensitivity, two cameras, proprio and bidirectional SDPA; mixed-bit W4A16/W8A16. |
+| OpenVLA-OFT | `openvla_oft_fp16`, `openvla_oft_qvla_w4`, `openvla_oft_qvla_w8` | Native continuous-action sensitivity, two cameras, proprio and bidirectional SDPA; BF16 and mixed-bit W4A16/W8A16. W8A16 is revalidated at 98.0% on Spatial. |
 | UniVLA | `univla_fp16` | FP16 evaluation with an external action decoder. Quantized UniVLA routes are not advertised as validated yet. |
 | StarVLA | `starvla_oft_fp16`, `starvla_gr00t_fp16`, `starvla_pi_fp16`, `starvla_fast_fp16` | StarVLA-OFT FP16/BF16 is validated. Other FP16/BF16 entries require matching checkpoints. Quantized StarVLA routes require future Qwen-VL/action-head adapters. |
 | WAM extensions | Planned | QuantWAMs-style closed-loop calibration and video-action objective-aware precision allocation are future research directions. |

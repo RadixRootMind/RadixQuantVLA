@@ -95,7 +95,21 @@ bash scripts/run_awesome_quant_vla.sh openvla_oft_qvla_w8 \
 
 Select the corresponding `_w4` profile for W4A16. `--trials 1` is a 10-episode
 smoke check, `--trials 10` is 100 episodes, and `--trials 50` is 500 episodes.
-Report each protocol separately. No numerical outcome is bundled with this update.
+Report each protocol separately.
+
+## Current OpenVLA-OFT validation
+
+At commit `6fa2cf0`, the repaired OFT route was evaluated on LIBERO Spatial with
+the pinned merged checkpoint revision `6d0231af0e48c5985f1ff86908f4674b84bc049b`,
+10 trials per task (100 episodes), and seed 7. The BF16 compatibility profile
+reached 99.0%. The W8A16 profile, calibrated on 32 training-RLDS samples with
+candidate bits `0,4,8,16`, reached 98.0%. Its final mean
+allocated bit width was `7.999997820970975` with a 1% per-layer pruning cap.
+
+These are single-seed local engineering results, not official paper numbers.
+W8A16 is fake-weight quantization with BF16 activations and computation; it does
+not demonstrate native integer acceleration. Earlier OFT results of 60% and 26%
+belong to the legacy integration. See [the OFT validation details](qvla_oft.md).
 
 `--action plan|build_calib|proxy|assign|eval|export|run|result` is supported.
 For staged runs, repeat the same arguments/output directory and change only
