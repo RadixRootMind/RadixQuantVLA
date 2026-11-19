@@ -71,13 +71,13 @@ RadixQuantVLA 按照 VLA 量化与部署准备链路来组织工程结构。
 
 | 时间 | 更新 |
 | --- | --- |
-| 2026-11 | 修复后的 OpenVLA-OFT QVLA W8A16 路线完成 LIBERO Spatial 复验：相同 100 回合、seed 7 协议下，BF16 为 99.0%，mixed-bit W8A16 为 98.0%。 |
-| 2026-10 | 完成 Pi0.5 与 GR00T N1.5 的 FoldQuantVLA 原生 W4A4/W8A8 路线接入，覆盖量化 checkpoint、ONNX、TensorRT engine、数值验证、时延测试和 LIBERO 评测。 |
-| 2026-09 | 项目重命名并重新定位为 `RadixQuantVLA`，README 按统一 VLA 量化与部署架构重塑。 |
-| 2026-08 | StarVLA-OFT FP16/BF16 LIBERO 路线完成集成和验证。 |
-| 2026-08 | UniVLA FP16 LIBERO 路线完成集成，并支持 action decoder。 |
-| 2026-08 | QVLA/OpenVLA 与 OpenVLA-OFT mixed-bit W8 路线完成集成。 |
-| 2026-08 | GR00T-N1.5 与 Pi0.5/OpenPI W4A8/W4A4 路线在统一 launcher 下完成验证。 |
+| 2026&#8209;11 | 修复后的 OpenVLA-OFT QVLA W8A16 路线完成 LIBERO Spatial 复验：相同 100 回合、seed 7 协议下，BF16 为 99.0%，mixed-bit W8A16 为 98.0%。 |
+| 2026&#8209;10 | 完成 Pi0.5 与 GR00T N1.5 的 FoldQuantVLA 原生 W4A4/W8A8 路线接入，覆盖量化 checkpoint、ONNX、TensorRT engine、数值验证、时延测试和 LIBERO 评测。 |
+| 2026&#8209;09 | 项目重命名并重新定位为 `RadixQuantVLA`，README 按统一 VLA 量化与部署架构重塑。 |
+| 2026&#8209;08 | StarVLA-OFT FP16/BF16 LIBERO 路线完成集成和验证。 |
+| 2026&#8209;08 | UniVLA FP16 LIBERO 路线完成集成，并支持 action decoder。 |
+| 2026&#8209;08 | QVLA/OpenVLA 与 OpenVLA-OFT mixed-bit W8 路线完成集成。 |
+| 2026&#8209;08 | GR00T-N1.5 与 Pi0.5/OpenPI W4A8/W4A4 路线在统一 launcher 下完成验证。 |
 
 ## 核心能力
 

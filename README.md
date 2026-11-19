@@ -71,13 +71,13 @@ QuantWAMs is not advertised here as an integrated route. It is used as a researc
 
 | Date | Update |
 | --- | --- |
-| 2026-11 | Repaired OpenVLA-OFT QVLA W8A16 route revalidated on LIBERO Spatial: BF16 99.0% and mixed-bit W8A16 98.0% under the same 100-episode, seed-7 protocol. |
-| 2026-10 | FoldQuantVLA native W4A4/W8A8 routes integrated for Pi0.5 and GR00T N1.5, including quantized checkpoints, ONNX export, TensorRT engine build, numerical verification, latency benchmark, and LIBERO evaluation. |
-| 2026-09 | Project renamed and repositioned as `RadixQuantVLA`. README rebuilt around a unified VLA quantization and deployment architecture. |
-| 2026-08 | StarVLA-OFT FP16/BF16 LIBERO route integrated and validated. |
-| 2026-08 | UniVLA FP16 LIBERO route integrated and validated with action decoder support. |
-| 2026-08 | QVLA/OpenVLA and OpenVLA-OFT mixed-bit W8 routes integrated. |
-| 2026-08 | GR00T-N1.5 and Pi0.5/OpenPI W4A8/W4A4 routes validated under the unified launcher. |
+| 2026&#8209;11 | Repaired OpenVLA-OFT QVLA W8A16 route revalidated on LIBERO Spatial: BF16 99.0% and mixed-bit W8A16 98.0% under the same 100-episode, seed-7 protocol. |
+| 2026&#8209;10 | FoldQuantVLA native W4A4/W8A8 routes integrated for Pi0.5 and GR00T N1.5, including quantized checkpoints, ONNX export, TensorRT engine build, numerical verification, latency benchmark, and LIBERO evaluation. |
+| 2026&#8209;09 | Project renamed and repositioned as `RadixQuantVLA`. README rebuilt around a unified VLA quantization and deployment architecture. |
+| 2026&#8209;08 | StarVLA-OFT FP16/BF16 LIBERO route integrated and validated. |
+| 2026&#8209;08 | UniVLA FP16 LIBERO route integrated and validated with action decoder support. |
+| 2026&#8209;08 | QVLA/OpenVLA and OpenVLA-OFT mixed-bit W8 routes integrated. |
+| 2026&#8209;08 | GR00T-N1.5 and Pi0.5/OpenPI W4A8/W4A4 routes validated under the unified launcher. |
 
 ## Key Features
 
